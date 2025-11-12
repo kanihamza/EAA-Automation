@@ -1,0 +1,54 @@
+name: Validate Power Apps YAML
+
+on:
+  pull_request:
+    paths:
+      - '**.yaml'
+      - '**.yml'
+
+jobs:
+  validate-yaml:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write  # needed to post comments
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml jsonschema
+
+      - name: Generate diff
+        run: |
+          git fetch origin main
+          git diff origin/main...HEAD --unified=0 -- '*.yaml' '*.yml' > diff_output.txt || true
+
+      - name: Validate Power Apps YAML
+        id: validate
+        run: |
+          python scripts/validate_yaml.py powerapps-schema.yaml > validation_output.txt 2>&1 || echo "FAILED" > status.txt
+
+      - name: Post results to PR
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: "🧾 Power Apps YAML Validation Results"
+          message: |
+            ## 🧾 Power Apps YAML Validation
+            **Diff:**  
+            \`\`\`diff
+            $(cat diff_output.txt | head -n 50)
+            \`\`\`
+
+            **Schema Validation Output:**  
+            \`\`\`
+            $(cat validation_output.txt | head -n 50)
+            \`\`\`
