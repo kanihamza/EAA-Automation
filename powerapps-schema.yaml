@@ -1,0 +1,6 @@
+type: object
+properties:
+  Screens:
+    type: object
+required:
+  - Screens
