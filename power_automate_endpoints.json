@@ -1,0 +1,388 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "lastUpdated": "2025-12-18T03:18:11Z",
+    "description": "Central configuration for all Power Automate flow endpoints and payloads",
+    "totalFlows": 16,
+    "author": "kanihamza"
+  },
+  "flows": [
+    {
+      "id": 1,
+      "name": "User Provisioning Flow",
+      "description": "Handles new user account creation and initial setup",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "userId": "string",
+        "firstName": "string",
+        "lastName": "string",
+        "email": "string",
+        "department": "string",
+        "manager": "string",
+        "role": "string",
+        "startDate": "string (YYYY-MM-DD)"
+      },
+      "expectedResponse": {
+        "status": "success",
+        "message": "string",
+        "userId": "string",
+        "accountCreated": "boolean"
+      }
+    },
+    {
+      "id": 2,
+      "name": "User Deprovisioning Flow",
+      "description": "Handles user account termination and data cleanup",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "userId": "string",
+        "email": "string",
+        "terminationDate": "string (YYYY-MM-DD)",
+        "preserveData": "boolean"
+      },
+      "expectedResponse": {
+        "status": "success",
+        "message": "string",
+        "accountDisabled": "boolean",
+        "dataArchived": "boolean"
+      }
+    },
+    {
+      "id": 3,
+      "name": "Access Request Approval Flow",
+      "description": "Routes access requests to appropriate managers for approval",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "requestId": "string",
+        "userId": "string",
+        "resourceName": "string",
+        "accessLevel": "string",
+        "justification": "string",
+        "managerId": "string"
+      },
+      "expectedResponse": {
+        "status": "pending",
+        "requestId": "string",
+        "approvalUrl": "string"
+      }
+    },
+    {
+      "id": 4,
+      "name": "Access Revocation Flow",
+      "description": "Revokes user access to specified resources",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "userId": "string",
+        "resourceId": "string",
+        "resourceName": "string",
+        "reason": "string",
+        "revokedBy": "string"
+      },
+      "expectedResponse": {
+        "status": "success",
+        "message": "string",
+        "accessRevoked": "boolean"
+      }
+    },
+    {
+      "id": 5,
+      "name": "Group Membership Update Flow",
+      "description": "Adds or removes users from security groups",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "userId": "string",
+        "groupId": "string",
+        "groupName": "string",
+        "action": "add|remove",
+        "reason": "string"
+      },
+      "expectedResponse": {
+        "status": "success",
+        "message": "string",
+        "groupId": "string",
+        "membershipUpdated": "boolean"
+      }
+    },
+    {
+      "id": 6,
+      "name": "Role Assignment Flow",
+      "description": "Assigns or updates user roles across systems",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "userId": "string",
+        "roleId": "string",
+        "roleName": "string",
+        "systemId": "string",
+        "startDate": "string (YYYY-MM-DD)",
+        "endDate": "string (YYYY-MM-DD)"
+      },
+      "expectedResponse": {
+        "status": "success",
+        "message": "string",
+        "roleAssigned": "boolean"
+      }
+    },
+    {
+      "id": 7,
+      "name": "Multi-Factor Authentication Setup Flow",
+      "description": "Enables MFA for users",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "userId": "string",
+        "email": "string",
+        "mfaMethod": "authenticator|sms|email",
+        "phoneNumber": "string (optional)"
+      },
+      "expectedResponse": {
+        "status": "success",
+        "message": "string",
+        "mfaEnabled": "boolean",
+        "registrationUrl": "string"
+      }
+    },
+    {
+      "id": 8,
+      "name": "Password Reset Flow",
+      "description": "Initiates and manages user password resets",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "userId": "string",
+        "email": "string",
+        "resetReason": "string",
+        "resetBy": "string"
+      },
+      "expectedResponse": {
+        "status": "success",
+        "message": "string",
+        "resetLink": "string",
+        "expiresIn": "integer (hours)"
+      }
+    },
+    {
+      "id": 9,
+      "name": "License Assignment Flow",
+      "description": "Assigns software licenses to users",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "userId": "string",
+        "licenseSkuId": "string",
+        "licenseName": "string",
+        "quantity": "integer",
+        "startDate": "string (YYYY-MM-DD)",
+        "endDate": "string (YYYY-MM-DD)"
+      },
+      "expectedResponse": {
+        "status": "success",
+        "message": "string",
+        "licenseAssigned": "boolean",
+        "assignmentId": "string"
+      }
+    },
+    {
+      "id": 10,
+      "name": "System Access Audit Flow",
+      "description": "Audits and logs all system access changes",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "userId": "string",
+        "systemId": "string",
+        "systemName": "string",
+        "accessType": "grant|revoke|modify",
+        "timestamp": "string (ISO 8601)",
+        "changedBy": "string"
+      },
+      "expectedResponse": {
+        "status": "success",
+        "message": "string",
+        "auditId": "string",
+        "logged": "boolean"
+      }
+    },
+    {
+      "id": 11,
+      "name": "Department Transfer Flow",
+      "description": "Manages user transfers between departments",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "userId": "string",
+        "currentDepartment": "string",
+        "newDepartment": "string",
+        "newManager": "string",
+        "transferDate": "string (YYYY-MM-DD)",
+        "reason": "string"
+      },
+      "expectedResponse": {
+        "status": "success",
+        "message": "string",
+        "transferId": "string",
+        "departmentUpdated": "boolean"
+      }
+    },
+    {
+      "id": 12,
+      "name": "Compliance Report Generation Flow",
+      "description": "Generates compliance and access reports",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "reportType": "access_summary|user_activity|permission_audit|compliance_check",
+        "startDate": "string (YYYY-MM-DD)",
+        "endDate": "string (YYYY-MM-DD)",
+        "departments": ["string"],
+        "includeArchived": "boolean"
+      },
+      "expectedResponse": {
+        "status": "success",
+        "message": "string",
+        "reportId": "string",
+        "downloadUrl": "string",
+        "generatedAt": "string"
+      }
+    },
+    {
+      "id": 13,
+      "name": "Notification and Alert Flow",
+      "description": "Sends notifications for access changes and alerts",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "recipientId": "string",
+        "recipientEmail": "string",
+        "notificationType": "access_grant|access_revoke|approval_needed|password_reset",
+        "subject": "string",
+        "message": "string",
+        "actionUrl": "string (optional)"
+      },
+      "expectedResponse": {
+        "status": "success",
+        "message": "string",
+        "notificationId": "string",
+        "sent": "boolean"
+      }
+    },
+    {
+      "id": 14,
+      "name": "Bulk Operations Flow",
+      "description": "Handles bulk user and access operations",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "operationType": "bulk_provision|bulk_deprovision|bulk_role_assignment|bulk_group_update",
+        "fileUrl": "string",
+        "fileFormat": "csv|xlsx",
+        "rowCount": "integer",
+        "executedBy": "string"
+      },
+      "expectedResponse": {
+        "status": "pending|success|partial_success",
+        "message": "string",
+        "batchId": "string",
+        "totalRows": "integer",
+        "successCount": "integer",
+        "failureCount": "integer",
+        "reportUrl": "string"
+      }
+    },
+    {
+      "id": 15,
+      "name": "Emergency Access Request Flow",
+      "description": "Handles emergency/break-glass access requests",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "userId": "string",
+        "resourceId": "string",
+        "resourceName": "string",
+        "reason": "string",
+        "duration": "integer (minutes)",
+        "requesterRole": "string"
+      },
+      "expectedResponse": {
+        "status": "approved|denied",
+        "message": "string",
+        "accessGranted": "boolean",
+        "accessToken": "string (if approved)",
+        "expiresAt": "string (ISO 8601)"
+      }
+    },
+    {
+      "id": 16,
+      "name": "System Integration Sync Flow",
+      "description": "Synchronizes user data across multiple systems",
+      "endpoint": "https://prod-xx.westeurope.logic.azure.com:443/workflows/xxxxxxxx/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xxxxxxxx",
+      "method": "POST",
+      "triggerType": "manual",
+      "payload": {
+        "syncType": "full|incremental|target_specific",
+        "sourceSystem": "string",
+        "targetSystems": ["string"],
+        "dataFilter": "string (optional)",
+        "syncTimestamp": "string (ISO 8601)"
+      },
+      "expectedResponse": {
+        "status": "success|partial_success|failed",
+        "message": "string",
+        "syncId": "string",
+        "recordsProcessed": "integer",
+        "recordsSynced": "integer",
+        "failedRecords": "integer",
+        "nextSyncTime": "string"
+      }
+    }
+  ],
+  "commonHeaders": {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer {token}",
+    "User-Agent": "EAA-Automation-Client/1.0"
+  },
+  "errorCodes": {
+    "400": "Bad Request - Invalid payload format",
+    "401": "Unauthorized - Invalid or missing authentication token",
+    "403": "Forbidden - Insufficient permissions",
+    "404": "Not Found - Flow or resource not found",
+    "429": "Too Many Requests - Rate limit exceeded",
+    "500": "Internal Server Error - Flow execution failed",
+    "503": "Service Unavailable - Power Automate service temporarily unavailable"
+  },
+  "usageNotes": {
+    "authentication": "All endpoints require valid Azure AD authentication token",
+    "rateLimit": "100 requests per minute per flow",
+    "timeout": "30 seconds for synchronous responses",
+    "asyncOperations": "Bulk operations return immediately with batch ID for status polling",
+    "retryPolicy": "Implement exponential backoff with 3 retry attempts",
+    "dataEncryption": "All payloads should be transmitted over HTTPS with TLS 1.2 or higher"
+  },
+  "updateHistory": [
+    {
+      "version": "1.0",
+      "date": "2025-12-18",
+      "changes": "Initial configuration with all 16 flows defined"
+    }
+  ]
+}
