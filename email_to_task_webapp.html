@@ -1,1927 +1,468 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>NITDA Email → Task Web App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root {
-      --nitda-green: #05583b;
-      --nitda-green-soft: #00703c;
-      --nitda-accent: #00a69d;
-      --nitda-gold: #d4af37;
-      --bg: #f4f6f9;
-      --card-bg: #ffffff;
-      --border-subtle: #e2e8f0;
-      --text-main: #1f2933;
-      --text-muted: #6b7280;
-      --danger: #dc2626;
-      --info: #2563eb;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text-main);
-    }
-
-    .app-shell {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    header.app-header {
-      background: linear-gradient(90deg, #000000, var(--nitda-green), rgba(0, 129, 77, 0.8));
-      color: #fff;
-      padding: 0.75rem 1.25rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-
-    header img {
-      height: 40px;
-    }
-
-    header .title-block {
-      display: flex;
-      flex-direction: column;
-    }
-
-    header .title-block h1 {
-      margin: 0;
-      font-size: 1.1rem;
-      letter-spacing: 0.03em;
-    }
-
-    header .title-block span {
-      font-size: 0.75rem;
-      opacity: 0.9;
-    }
-
-    main.app-main {
-      flex: 1;
-      display: grid;
-      grid-template-columns: minmax(260px, 360px) minmax(0, 1.8fr) minmax(0, 1.2fr);
-      gap: 0.75rem;
-      padding: 0.75rem;
-    }
-
-    @media (max-width: 1100px) {
-      main.app-main {
-        grid-template-columns: minmax(260px, 360px) minmax(0, 1.7fr);
-        grid-template-rows: auto auto;
-        grid-template-areas:
-          'emails emails'
-          'task chat';
-      }
-      .panel-emails {
-        grid-area: emails;
-      }
-      .panel-task {
-        grid-area: task;
-      }
-      .panel-chat {
-        grid-area: chat;
-      }
-    }
-
-    @media (max-width: 850px) {
-      main.app-main {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: auto auto auto;
-        grid-template-areas:
-          'emails'
-          'task'
-          'chat';
-      }
-    }
-
-    .panel {
-      background: var(--card-bg);
-      border-radius: 12px;
-      border: 1px solid rgba(15, 23, 42, 0.06);
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .panel::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(0, 129, 77, 0.08), rgba(77, 189, 144, 0.04));
-      opacity: 0.6;
-      pointer-events: none;
-    }
-
-    .panel-inner {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      height: 100%;
-    }
-
-    .panel-header {
-      padding: 0.65rem 0.9rem;
-      border-bottom: 1px solid var(--border-subtle);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-    }
-
-    .panel-header h2 {
-      margin: 0;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--nitda-green);
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-
-    .panel-header h2 span.icon {
-      font-size: 1rem;
-    }
-
-    .panel-body {
-      padding: 0.75rem;
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-    }
-
-    .badge-pill {
-      padding: 0.15rem 0.5rem;
-      font-size: 0.7rem;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: rgba(15, 23, 42, 0.2);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-    }
-
-    .badge-pill span.dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #22c55e;
-    }
-
-    .toolbar-row {
-      display: flex;
-      gap: 0.35rem;
-      align-items: center;
-      margin-bottom: 0.4rem;
-    }
-
-    .toolbar-row .search-box {
-      flex: 1;
-      position: relative;
-    }
-
-    .toolbar-row input[type='search'] {
-      width: 100%;
-      padding: 0.4rem 0.7rem 0.4rem 1.7rem;
-      border-radius: 999px;
-      border: 1px solid var(--border-subtle);
-      font-size: 0.8rem;
-      outline: none;
-      background: #f9fafb;
-    }
-
-    .toolbar-row input[type='search']:focus {
-      border-color: var(--nitda-green-soft);
-      box-shadow: 0 0 0 1px rgba(5, 88, 59, 0.15);
-      background: #ffffff;
-    }
-
-    .toolbar-row .search-icon {
-      position: absolute;
-      left: 0.55rem;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    .toolbar-row button {
-      padding: 0.35rem 0.65rem;
-      border-radius: 999px;
-      border: 0;
-      font-size: 0.75rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      background: var(--nitda-green);
-      color: #fff;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
-    .toolbar-row button.secondary {
-      background: #111827;
-    }
-
-    .toolbar-row button.danger {
-      background: var(--danger);
-    }
-
-    .toolbar-row button:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-
-    .email-list {
-      border-radius: 10px;
-      border: 1px solid var(--border-subtle);
-      overflow: hidden;
-      background: rgba(255, 255, 255, 0.85);
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      height: 100%;
-    }
-
-    .email-list-header {
-      padding: 0.35rem 0.6rem;
-      border-bottom: 1px solid var(--border-subtle);
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-    }
-
-    .email-list-header .count {
-      font-weight: 500;
-      color: var(--nitda-green);
-    }
-
-    .email-items {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0.3rem;
-    }
-
-    .email-card {
-      border-radius: 10px;
-      border: 1px solid rgba(5, 88, 59, 0.35);
-      margin-bottom: 0.4rem;
-      padding: 0.45rem 0.5rem 0.4rem;
-      cursor: pointer;
-      background: #ffffff;
-      position: relative;
-      transition: box-shadow 0.12s ease, transform 0.1s ease, border-color 0.1s ease;
-    }
-
-    .email-card:hover {
-      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
-      transform: translateY(-1px);
-    }
-
-    .email-card.selected {
-      border-color: var(--nitda-green-soft);
-      box-shadow: 0 0 0 1px rgba(5, 88, 59, 0.32);
-      background: #f0fdf4;
-    }
-
-    .email-card-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 0.5rem;
-      align-items: baseline;
-    }
-
-    .email-subject {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--nitda-green);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 75%;
-    }
-
-    .email-date {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      white-space: nowrap;
-    }
-
-    .email-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 0.3rem;
-      font-size: 0.75rem;
-    }
-
-    .email-from {
-      color: #374151;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 70%;
-    }
-
-    .email-attachments {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      font-size: 0.7rem;
-      color: var(--nitda-green);
-    }
-
-    .status-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      margin-right: 0.25rem;
-      background: var(--nitda-green);
-    }
-
-    .status-dot.unread {
-      background: #dc2626;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      border-radius: 999px;
-      padding: 0.1rem 0.45rem;
-      font-size: 0.65rem;
-      background: #ecfdf5;
-      color: var(--nitda-green);
-      border: 1px solid rgba(22, 163, 74, 0.4);
-    }
-
-    .attachments-scroller {
-      margin-top: 0.35rem;
-      display: flex;
-      gap: 0.3rem;
-      overflow-x: auto;
-      padding-bottom: 0.2rem;
-      scrollbar-width: thin;
-    }
-
-    .attachment-chip {
-      border-radius: 999px;
-      border: 1px solid var(--nitda-green-soft);
-      font-size: 0.7rem;
-      padding: 0.15rem 0.4rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      background: #ecfdf5;
-      white-space: nowrap;
-    }
-
-    .attachment-chip span.icon {
-      font-size: 0.75rem;
-    }
-
-    .message-bar {
-      padding: 0.35rem 0.6rem;
-      border-radius: 8px;
-      font-size: 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      margin-bottom: 0.35rem;
-    }
-
-    .message-bar.success {
-      background: #dcfce7;
-      border: 1px solid #22c55e;
-      color: #166534;
-    }
-
-    .message-bar.error {
-      background: #fee2e2;
-      border: 1px solid #ef4444;
-      color: #991b1b;
-    }
-
-    .message-bar.info {
-      background: #e0f2fe;
-      border: 1px solid #3b82f6;
-      color: #1d4ed8;
-    }
-
-    .message-bar button {
-      margin-left: auto;
-      background: transparent;
-      border: 0;
-      font-size: 0.75rem;
-      cursor: pointer;
-      color: inherit;
-    }
-
-    .email-detail {
-      border-radius: 10px;
-      border: 1px solid var(--border-subtle);
-      background: #ffffff;
-      padding: 0.7rem 0.75rem 0.6rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.45rem;
-      height: 100%;
-    }
-
-    .email-detail-header {
-      border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 0.4rem;
-      margin-bottom: 0.2rem;
-    }
-
-    .email-detail-header .from {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-    }
-
-    .email-detail-header .from strong {
-      color: #111827;
-    }
-
-    .email-detail-header .subject {
-      margin-top: 0.3rem;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--nitda-green);
-    }
-
-    .email-html {
-      flex: 1;
-      overflow-y: auto;
-      border-radius: 8px;
-      background: #f9fafb;
-      padding: 0.5rem 0.6rem;
-      font-size: 0.8rem;
-      color: #111827;
-    }
-
-    .email-html-inner {
-      background: #ffffff;
-      border-radius: 6px;
-      padding: 0.5rem 0.6rem;
-      border: 1px solid #e5e7eb;
-      min-height: 80px;
-    }
-
-    .email-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem;
-      margin-top: 0.4rem;
-    }
-
-    .email-actions button {
-      padding: 0.3rem 0.6rem;
-      font-size: 0.75rem;
-      border-radius: 999px;
-      border: 0;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      background: #f3f4f6;
-      color: #111827;
-    }
-
-    .email-actions button.primary {
-      background: var(--nitda-green);
-      color: #fff;
-    }
-
-    .email-actions button.outline {
-      background: transparent;
-      border: 1px solid #d1d5db;
-    }
-
-    .email-actions button.danger {
-      background: var(--danger);
-      color: #fff;
-    }
-
-    .task-form {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      font-size: 0.78rem;
-    }
-
-    .field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.18rem;
-    }
-
-    .field-label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .field-label span.req {
-      color: var(--danger);
-      margin-left: 0.15rem;
-    }
-
-    .field-input,
-    .field-select,
-    .field-textarea {
-      width: 100%;
-      border-radius: 8px;
-      border: 1px solid var(--border-subtle);
-      padding: 0.35rem 0.4rem;
-      font-size: 0.78rem;
-      outline: none;
-      background: #ffffff;
-    }
-
-    .field-input:focus,
-    .field-select:focus,
-    .field-textarea:focus {
-      border-color: var(--nitda-green-soft);
-      box-shadow: 0 0 0 1px rgba(5, 88, 59, 0.15);
-    }
-
-    .field-textarea {
-      resize: vertical;
-      min-height: 60px;
-    }
-
-    .field-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.25rem;
-      margin-top: 0.1rem;
-    }
-
-    .chip {
-      padding: 0.15rem 0.45rem;
-      border-radius: 999px;
-      background: #eff6ff;
-      font-size: 0.7rem;
-      border: 1px solid #bfdbfe;
-      color: #1d4ed8;
-    }
-
-    .inline-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem;
-      margin-top: 0.35rem;
-    }
-
-    .inline-actions button {
-      padding: 0.28rem 0.55rem;
-      border-radius: 999px;
-      border: 0;
-      font-size: 0.75rem;
-      cursor: pointer;
-      background: #f3f4f6;
-      color: #111827;
-    }
-
-    .inline-actions button.primary {
-      background: var(--nitda-green);
-      color: #fff;
-    }
-
-    .inline-actions button.outline {
-      background: transparent;
-      border: 1px solid #d1d5db;
-    }
-
-    .chat-container {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      height: 100%;
-    }
-
-    .chat-log {
-      flex: 1;
-      border-radius: 10px;
-      border: 1px solid var(--border-subtle);
-      background: #f9fafb;
-      padding: 0.4rem 0.4rem 0.2rem;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column-reverse;
-      gap: 0.25rem;
-    }
-
-    .chat-bubble {
-      max-width: 88%;
-      border-radius: 16px;
-      padding: 0.4rem 0.6rem;
-      font-size: 0.78rem;
-      line-height: 1.4;
-      position: relative;
-      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.15);
-    }
-
-    .chat-bubble.user {
-      align-self: flex-end;
-      background: var(--nitda-green-soft);
-      color: #fff;
-      border-bottom-right-radius: 4px;
-    }
-
-    .chat-bubble.ai {
-      align-self: flex-start;
-      background: #f3f4f6;
-      color: #111827;
-      border-bottom-left-radius: 4px;
-    }
-
-    .chat-meta {
-      margin-top: 0.15rem;
-      font-size: 0.65rem;
-      color: rgba(255, 255, 255, 0.75);
-      text-align: right;
-    }
-
-    .chat-bubble.ai .chat-meta {
-      color: #6b7280;
-      text-align: left;
-    }
-
-    .chat-input-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      border-radius: 12px;
-      border: 1px solid var(--border-subtle);
-      padding: 0.35rem;
-      background: #ffffff;
-    }
-
-    .chat-input-row {
-      display: flex;
-      gap: 0.35rem;
-      align-items: flex-end;
-    }
-
-    .chat-input-row textarea {
-      flex: 1;
-      border-radius: 999px;
-      padding: 0.45rem 0.7rem;
-      border: 1px solid var(--border-subtle);
-      font-size: 0.8rem;
-      min-height: 42px;
-      max-height: 72px;
-      resize: vertical;
-      outline: none;
-      background: #f9fafb;
-    }
-
-    .chat-input-row textarea:focus {
-      border-color: var(--nitda-green-soft);
-      box-shadow: 0 0 0 1px rgba(5, 88, 59, 0.15);
-      background: #ffffff;
-    }
-
-    .chat-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem;
-      font-size: 0.75rem;
-    }
-
-    .chat-buttons button {
-      border-radius: 999px;
-      padding: 0.25rem 0.6rem;
-      border: 0;
-      cursor: pointer;
-      background: #f3f4f6;
-      color: #111827;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-    }
-
-    .chat-buttons button.primary {
-      background: var(--nitda-green);
-      color: #fff;
-    }
-
-    .overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.35);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 40;
-    }
-
-    .overlay.visible {
-      display: flex;
-    }
-
-    .dialog {
-      background: #ffffff;
-      border-radius: 14px;
-      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.35);
-      max-width: 640px;
-      width: 92%;
-      padding: 0.9rem 0.95rem 0.85rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-      position: relative;
-    }
-
-    .dialog-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-      border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 0.35rem;
-    }
-
-    .dialog-header h3 {
-      margin: 0;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--nitda-green);
-    }
-
-    .dialog-header button.close {
-      border: 0;
-      background: transparent;
-      cursor: pointer;
-      font-size: 0.9rem;
-      color: #6b7280;
-    }
-
-    .dialog-body {
-      font-size: 0.8rem;
-      max-height: 55vh;
-      overflow-y: auto;
-    }
-
-    .dialog-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.4rem;
-      padding-top: 0.35rem;
-      border-top: 1px solid #e5e7eb;
-    }
-
-    .dialog-actions button {
-      padding: 0.3rem 0.7rem;
-      border-radius: 999px;
-      border: 0;
-      font-size: 0.78rem;
-      cursor: pointer;
-    }
-
-    .dialog-actions button.secondary {
-      background: #e5e7eb;
-      color: #111827;
-    }
-
-    .dialog-actions button.primary {
-      background: var(--nitda-green);
-      color: #fff;
-    }
-
-    .loading-bar {
-      position: absolute;
-      inset-inline: 0;
-      top: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--nitda-green-soft), #22c55e, var(--nitda-accent));
-      background-size: 200% 100%;
-      animation: loading-stripe 1.1s linear infinite;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    @keyframes loading-stripe {
-      from {
-        background-position: 0 0;
-      }
-      to {
-        background-position: -200% 0;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email to Task Conversion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        input[type="email"],
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="email"]:focus,
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-clear {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-clear:hover {
+            background: #e0e0e0;
+        }
+        
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+            font-size: 14px;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        
+        .message.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #0c5460;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .file-input-label {
+            display: block;
+            padding: 12px;
+            background: #f8f9fa;
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .file-input-label:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .file-list {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #666;
+        }
+    </style>
 </head>
 <body>
-  <div class="app-shell" id="app">
-    <header class="app-header">
-      <img src="https://nitda.gov.ng/wp-content/uploads/2020/11/nitda-logo.png" alt="NITDA" />
-      <div class="title-block">
-        <h1>NITDA Email &rarr; Task Orchestrator</h1>
-        <span>Email intake, AI-assisted triage and assignment</span>
-      </div>
-      <div style="margin-left:auto;font-size:0.8rem;display:flex;align-items:center;gap:0.4rem;">
-        <span class="badge-pill"><span class="dot"></span>Connected to Outlook via Power Automate</span>
-      </div>
-    </header>
-
-    <main class="app-main">
-      <!-- EMAIL PANEL -->
-      <section class="panel panel-emails" aria-label="Email panel">
-        <div class="panel-inner">
-          <div class="panel-header">
-            <h2><span class="icon">📧</span> Emails</h2>
-            <span style="font-size:0.75rem;color:var(--text-muted);">Folder: <span id="currentFolderLabel">Inbox</span></span>
-          </div>
-          <div class="panel-body">
-            <div class="toolbar-row">
-              <div class="search-box">
-                <span class="search-icon">🔍</span>
-                <input id="searchInput" type="search" placeholder="Search subject or sender..." />
-              </div>
-              <button id="btnReload" type="button" title="Reload emails">
-                ⟳ Reload
-              </button>
-              <button id="btnFilterInfo" type="button" class="secondary" title="Filter info@nitda.gov.ng">
-                Info
-              </button>
+    <div class="container">
+        <h1>📧 Email to Task Conversion</h1>
+        
+        <form id="emailForm">
+            <div class="form-group">
+                <label for="emailAddress">Email Address *</label>
+                <input type="email" id="emailAddress" name="email" required placeholder="Enter email address">
             </div>
-
-            <div id="notifyBar" class="message-bar hidden">
-              <span id="notifyText"></span>
-              <button type="button" onclick="clearNotification()">Dismiss</button>
+            
+            <div class="form-group">
+                <label for="taskTitle">Task Title *</label>
+                <input type="text" id="taskTitle" name="title" required placeholder="Enter task title">
             </div>
-
-            <div class="email-list">
-              <div class="email-list-header">
-                <span id="emailCountLabel" class="count">0 emails</span>
-                <div style="display:flex;gap:0.35rem;align-items:center;">
-                  <span style="font-size:0.7rem;color:var(--text-muted);">Batch: <span id="batchLabel">0</span></span>
-                  <button id="btnNextBatch" type="button" style="padding-inline:0.55rem;font-size:0.7rem;">Next batch</button>
+            
+            <div class="form-group">
+                <label for="taskDescription">Task Description</label>
+                <textarea id="taskDescription" name="description" placeholder="Enter task description"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="priority">Priority</label>
+                <input type="text" id="priority" name="priority" placeholder="e.g., High, Medium, Low">
+            </div>
+            
+            <div class="form-group">
+                <label for="dueDate">Due Date</label>
+                <input type="text" id="dueDate" name="dueDate" placeholder="e.g., 2025-12-25">
+            </div>
+            
+            <div class="form-group">
+                <label for="attachments">Attachments</label>
+                <div class="file-input-wrapper">
+                    <label for="fileInput" class="file-input-label">
+                        Click to upload files or drag and drop
+                    </label>
+                    <input type="file" id="fileInput" name="attachments" multiple>
+                    <div class="file-list" id="fileList"></div>
                 </div>
-              </div>
-              <div id="emailItems" class="email-items" aria-label="Email list"></div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- EMAIL DETAIL + TASK PANEL -->
-      <section class="panel panel-task" aria-label="Email details and task">
-        <div class="panel-inner">
-          <div class="panel-header">
-            <h2><span class="icon">📝</span> Email Details &amp; Task</h2>
-            <div class="inline-actions">
-              <button id="btnCreateTaskFromEmail" class="primary" type="button">Create Task</button>
-              <button id="btnPreviewTask" type="button">AI Preview</button>
-              <button id="btnClearTask" type="button" class="outline">Clear</button>
+            
+            <div class="button-group">
+                <button type="submit" class="btn-submit">Convert to Task</button>
+                <button type="reset" class="btn-clear">Clear Form</button>
             </div>
-          </div>
-
-          <div class="panel-body" style="gap:0.7rem;">
-            <div class="email-detail" id="emailDetail">
-              <div class="email-detail-header">
-                <div class="from" id="emailFrom">No email selected</div>
-                <div class="subject" id="emailSubject"></div>
-              </div>
-              <div class="email-html">
-                <div id="emailBodyHtml" class="email-html-inner">Select an email from the list to view details.</div>
-              </div>
-              <div class="email-actions">
-                <button id="btnReply" class="outline" type="button">↩ Reply</button>
-                <button id="btnForward" class="outline" type="button">⤴ Forward</button>
-                <button id="btnMarkRead" class="outline" type="button">● Mark as read</button>
-                <button id="btnDeleteEmail" class="danger" type="button">🗑 Delete</button>
-              </div>
-            </div>
-
-            <div class="task-form" aria-label="Task form">
-              <div class="field-group">
-                <label class="field-label">Title <span class="req">*</span></label>
-                <input id="taskTitle" class="field-input" type="text" placeholder="Task title" />
-              </div>
-
-              <div class="field-group">
-                <label class="field-label">Category (Code / Sub-category)</label>
-                <select id="taskCategory" class="field-select">
-                  <option value="">Select category...</option>
-                  <option value="GEN-GEN">General &mdash; General</option>
-                  <option value="ICT-POL">ICT Policy &mdash; Policy Clarification</option>
-                  <option value="ICT-CMP">ICT Compliance &mdash; Monitoring/Enforcement</option>
-                </select>
-                <div class="field-chips" id="taskCategoryChips"></div>
-              </div>
-
-              <div class="field-group">
-                <label class="field-label">Assigned To (Primary DSU) <span class="req">*</span></label>
-                <input id="taskAssignedTo" class="field-input" type="email" placeholder="Primary assignee email (DSU Head)" />
-              </div>
-
-              <div class="field-group">
-                <label class="field-label">Copy To (CC)</label>
-                <input id="taskCopyTo" class="field-input" type="text" placeholder="Separate emails with ;" />
-              </div>
-
-              <div class="field-group">
-                <label class="field-label">Priority</label>
-                <select id="taskPriority" class="field-select">
-                  <option value="">Select priority...</option>
-                  <option value="High">High</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Low">Low</option>
-                </select>
-              </div>
-
-              <div class="field-group">
-                <label class="field-label">
-                  Description / AI Summary
-                  <button id="btnInsertSummary" type="button" style="border:0;background:transparent;color:var(--info);font-size:0.72rem;cursor:pointer;">Insert latest AI summary</button>
-                </label>
-                <textarea id="taskDescription" class="field-textarea" placeholder="Summary of the email and required action"></textarea>
-              </div>
-
-              <div class="field-group">
-                <label class="field-label">Comments / Notes</label>
-                <textarea id="taskComments" class="field-textarea" placeholder="Internal comments and extra notes"></textarea>
-              </div>
-
-              <div class="field-group" style="display:flex;gap:0.5rem;">
-                <div style="flex:1;">
-                  <label class="field-label">Acknowledgement Due</label>
-                  <input id="taskAckDate" class="field-input" type="date" />
-                </div>
-                <div style="flex:1;">
-                  <label class="field-label">Task Due</label>
-                  <input id="taskDueDate" class="field-input" type="date" />
-                </div>
-              </div>
-
-              <div class="inline-actions">
-                <button id="btnShowPreviewDialog" class="primary" type="button">Preview &amp; Confirm</button>
-                <button id="btnResetTask" type="button" class="outline">Reset form</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- AI CHAT PANEL -->
-      <section class="panel panel-chat" aria-label="AI Assist">
-        <div class="panel-inner">
-          <div class="panel-header">
-            <h2><span class="icon">🤖</span> AI Assist</h2>
-            <span style="font-size:0.75rem;color:var(--text-muted);">Ask questions about the selected email and task</span>
-          </div>
-          <div class="panel-body">
-            <div class="chat-container">
-              <div id="chatLog" class="chat-log" aria-label="Chat log"></div>
-
-              <div class="chat-input-panel">
-                <div class="chat-input-row">
-                  <textarea id="chatInput" placeholder="Type your message..."></textarea>
-                  <button id="btnChatSend" type="button" style="border-radius:999px;border:0;padding:0.4rem 0.75rem;background:var(--nitda-green);color:#fff;font-size:0.8rem;display:flex;align-items:center;gap:0.25rem;">
-                    ➤ Send
-                  </button>
-                </div>
-                <div class="chat-buttons">
-                  <button id="btnChatPreview" type="button">👁 Preview message</button>
-                  <button id="btnChatClear" type="button">🗑 Clear chat</button>
-                  <button id="btnChatSummarize" type="button" class="primary">🧠 Summarize email</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <!-- PREVIEW / CONFIRM DIALOG -->
-    <div id="previewOverlay" class="overlay" role="dialog" aria-modal="true">
-      <div class="dialog">
-        <div id="dialogLoadingBar" class="loading-bar hidden"></div>
-        <div class="dialog-header">
-          <h3>Confirm Task &amp; Notification Email</h3>
-          <button class="close" type="button" onclick="closePreviewDialog()">✕</button>
-        </div>
-        <div class="dialog-body">
-          <p style="margin-top:0;margin-bottom:0.5rem;font-size:0.8rem;color:var(--text-muted);">
-            Please review the generated email content and task details before sending. This will be sent via
-            <strong>Power Automate</strong> to the assignee and copied recipients.
-          </p>
-          <div id="previewHtml" style="border-radius:10px;border:1px solid #d1d5db;overflow:hidden;">
-            <!-- populated from JS: buildPreviewEmailHtml() -->
-          </div>
-        </div>
-        <div class="dialog-actions">
-          <button type="button" class="secondary" onclick="closePreviewDialog()">Cancel</button>
-          <button id="btnConfirmSend" type="button" class="primary">Confirm &amp; Send</button>
-        </div>
-      </div>
+            
+            <div id="message" class="message"></div>
+        </form>
     </div>
-  </div>
 
-  <script>
-    /************************************************************
-     *  CONFIGURATION: Set your Power Automate HTTP flow URLs
-     ************************************************************/
+    <script>
+        // Power Automate Flow Endpoints
+        const ENDPOINTS = {
+            getEmails: 'id-ep-1',
+            getAttachments: 'id-ep-2',
+            emailToTaskSummary: 'id-ep-3',
+            sendNotification: 'id-ep-4'
+        };
 
-    // 1. Flow: Get emails (HTTP POST)
-    //    Should accept JSON: { folderPath: string, top: number, skip: number, fetchOnlyUnread: boolean }
-    //    and return: { emails: Email[], nextBatchAvailable: boolean }
-    const FLOW_GET_EMAILS_URL = 'https://YOUR-FLOW-GET-EMAILS-URL';
+        const CONTENT_TYPE = 'application/json';
 
-    // 2. Flow: Get email attachments
-    //    Input: { emailId: string }
-    //    Output: { attachments: [{ name, contentType, downloadUrl? }] }
-    const FLOW_GET_ATTACHMENTS_URL = 'https://YOUR-FLOW-GET-ATTACHMENTS-URL';
+        // File input handling
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
 
-    // 3. Flow: Email-to-Task AI summary (equivalent to EmailToTaskProcessing.Run)
-    //    Input: { emailId: string }
-    //    Output: { subject, name, organization, summary, actionRequired, recommendedAction, emailDateReceived, emailTimeReceived, attachments }
-    const FLOW_EMAIL_SUMMARY_URL = 'https://YOUR-FLOW-EMAIL-SUMMARY-URL';
-
-    // 4. Flow: Send email notification (equivalent to Office365Outlook.SendEmailV2)
-    //    Input: { to, cc, subject, htmlBody }
-    //    Output: { success: boolean, message?: string }
-    const FLOW_SEND_EMAIL_URL = 'https://YOUR-FLOW-SEND-EMAIL-URL';
-
-    // 5. Flow: AI chat over email + task context (equivalent to 'PowerAppV2->ComposeAPIKey,...')
-    //    Input: { prompt, email, task }
-    //    Output: { ai_response: string }
-    const FLOW_AI_CHAT_URL = 'https://YOUR-FLOW-AI-CHAT-URL';
-
-    // 6. Optional: Flow to mark email as read / delete etc.
-    const FLOW_EMAIL_COMMANDS_URL = 'https://YOUR-FLOW-EMAIL-COMMANDS-URL';
-
-    /************************************************************
-     *  STATE
-     ************************************************************/
-
-    const state = {
-      emails: [],
-      filteredEmails: [],
-      selectedEmail: null,
-      currentFolder: 'Inbox',
-      batchSize: 250,
-      loadedBatchCount: 0,
-      nextBatchAvailable: false,
-      filterInfoOnly: false,
-      // task
-      task: {
-        title: '',
-        categoryCode: '',
-        categoryLabel: '',
-        assignedTo: '',
-        copyTo: '',
-        priority: '',
-        description: '',
-        comments: '',
-        ackDate: '',
-        dueDate: '',
-        preReferenceId: '',
-      },
-      latestAISummary: '',
-      // chat
-      chatMessages: [
-        {
-          id: 0,
-          sender: 'AI',
-          text: '👋 New conversation started. How can I help?',
-          ts: new Date(),
-        },
-      ],
-      // ui
-      notify: {
-        text: '',
-        type: '', // 'success' | 'error' | 'info'
-        visible: false,
-      },
-      loading: false,
-      dialogOpen: false,
-    };
-
-    /************************************************************
-     *  HELPERS
-     ************************************************************/
-
-    function setLoading(isLoading) {
-      state.loading = isLoading;
-      const bar = document.getElementById('dialogLoadingBar');
-      if (bar) {
-        bar.classList.toggle('hidden', !isLoading);
-      }
-    }
-
-    function notify(text, type = 'info') {
-      state.notify.text = text;
-      state.notify.type = type;
-      state.notify.visible = !!text;
-      const bar = document.getElementById('notifyBar');
-      const txt = document.getElementById('notifyText');
-      if (!bar || !txt) return;
-      txt.textContent = text;
-      bar.classList.remove('hidden', 'success', 'error', 'info');
-      if (!text) {
-        bar.classList.add('hidden');
-        return;
-      }
-      bar.classList.add(type);
-    }
-
-    function clearNotification() {
-      notify('', 'info');
-    }
-
-    function formatDateTime(iso) {
-      if (!iso) return '';
-      try {
-        const d = new Date(iso);
-        return d.toLocaleString();
-      } catch (e) {
-        return iso;
-      }
-    }
-
-    function ensurePreReferenceId() {
-      const now = new Date();
-      const y = now.getFullYear();
-      const m = String(now.getMonth() + 1).padStart(2, '0');
-      const d = String(now.getDate()).padStart(2, '0');
-      const dateStr = `${y}${m}${d}`;
-      const categoryCode = state.task.categoryCode || 'GEN';
-      const subCode = 'GEN';
-      state.task.preReferenceId = `${dateStr}-${categoryCode}-${subCode}-`;
-      return state.task.preReferenceId;
-    }
-
-    function buildPreviewEmailHtml() {
-      const t = state.task;
-      const email = state.selectedEmail;
-      const preRef = ensurePreReferenceId();
-      const due = t.dueDate || new Date().toISOString().slice(0, 10);
-      const title = t.title || (email ? email.subject || 'Task from email' : 'Task from email');
-      const description = (t.description || '').trim() || state.latestAISummary || '';
-
-      const emailBodySnippet = email && email.bodyPlain
-        ? `${email.bodyPlain.slice(0, 200)}${email.bodyPlain.length > 200 ? '...' : ''}`
-        : '';
-
-      const html = `
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-  </head>
-  <body style="font-family:Segoe UI, Arial, sans-serif; background:#f4f6f9; margin:0; padding:0;">
-    <div style="max-width:750px; margin:0 auto; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.08);">
-      <div style="background:linear-gradient(90deg,#00703c,#009e60); color:#fff; padding:22px;">
-        <h2 style="margin:0; font-size:20px; font-weight:600;">📌 Task Assignment</h2>
-        <div style="font-size:13.5px; opacity:0.9;">NITDA DG/CEO Office</div>
-      </div>
-
-      <div style="margin:16px 20px 12px; background:#f9fafb; border-left:3px solid #00703c; border-radius:6px; padding:10px 14px; font-size:13.5px; color:#4a5568;">
-        <span style="display:inline-block; margin-right:18px;"><b>Ref. No:</b> ${preRef}</span>
-        <span style="display:inline-block; margin-right:18px;"><b>Date:</b> ${due}</span>
-        <span style="display:inline-block; margin-right:18px;"><b>Category:</b> ${t.categoryLabel || 'N/A'}</span>
-        <span style="display:inline-block; margin-right:18px;"><b>Assigned To:</b> ${t.assignedTo || 'N/A'}</span>
-      </div>
-
-      ${email ? `
-      <div style="margin:0 20px 20px; background:#ffffff; border:1px solid #edf2f7; border-radius:8px; padding:12px 14px; font-size:13.5px; color:#374151; line-height:1.6;">
-        <div style="font-weight:600; font-size:14px; color:#00703c; margin-bottom:6px;">📧 Email Details</div>
-        <div><b>From:</b> ${email.from || 'Unknown'}</div>
-        <div><b>Subject:</b> ${email.subject || '(no subject)'}</div>
-        ${emailBodySnippet ? `<div style="margin-top:4px; font-style:italic; color:#555;">${emailBodySnippet}</div>` : ''}
-      </div>` : ''}
-
-      <div style="margin:0 20px 20px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:14px 16px; font-size:14px; color:#333;">
-        <h3 style="margin:0 0 8px 0; font-size:16px; color:#00703c;">Task Details</h3>
-        <div style="margin-bottom:6px;"><b>Title:</b> ${title}</div>
-        <div style="margin-bottom:6px;"><b>Priority:</b> ${t.priority || 'N/A'}</div>
-        <div style="margin-bottom:6px;"><b>Due Date:</b> ${due}</div>
-      </div>
-
-      ${description
-        ? `<div style="margin:0 20px 20px; font-size:14px; color:#374151; line-height:1.6;">
-             <b>Description:</b><br/>${description.replace(/\n/g, '<br/>')}
-           </div>`
-        : ''}
-
-      ${t.comments
-        ? `<div style="margin:0 20px 20px; font-size:13px; color:#4b5563; border-left:3px solid #d4af37; padding-left:10px;">
-             <b>Internal Comments:</b><br/>${t.comments.replace(/\n/g, '<br/>')}
-           </div>`
-        : ''}
-
-      <div style="margin:0 20px 20px; font-size:13.5px; color:#555;">
-        Regards,<br/><b>NITDA DG/CEO Office</b>
-      </div>
-
-      <div style="background:#f1f5f9; padding:10px 20px; font-size:12.5px; color:#6b7280; text-align:center; border-top:1px solid #e5e7eb;">
-        © ${new Date().getFullYear()} National Information Technology Development Agency (NITDA)
-      </div>
-    </div>
-  </body>
-</html>`;
-
-      return html;
-    }
-
-    /************************************************************
-     *  RENDERING
-     ************************************************************/
-
-    function renderEmails() {
-      const itemsContainer = document.getElementById('emailItems');
-      const countLabel = document.getElementById('emailCountLabel');
-      const batchLabel = document.getElementById('batchLabel');
-      if (!itemsContainer) return;
-
-      itemsContainer.innerHTML = '';
-      const emails = state.filteredEmails.length ? state.filteredEmails : state.emails;
-      countLabel.textContent = `${emails.length} email${emails.length === 1 ? '' : 's'}`;
-      batchLabel.textContent = `${state.loadedBatchCount}`;
-
-      emails.forEach((email) => {
-        const card = document.createElement('article');
-        card.className = 'email-card' + (state.selectedEmail && state.selectedEmail.id === email.id ? ' selected' : '');
-
-        const header = document.createElement('div');
-        header.className = 'email-card-header';
-
-        const subject = document.createElement('div');
-        subject.className = 'email-subject';
-        subject.textContent = email.subject || '(no subject)';
-
-        const date = document.createElement('div');
-        date.className = 'email-date';
-        date.textContent = formatDateTime(email.dateTimeReceived);
-
-        header.appendChild(subject);
-        header.appendChild(date);
-
-        const meta = document.createElement('div');
-        meta.className = 'email-meta';
-
-        const from = document.createElement('div');
-        from.className = 'email-from';
-        from.textContent = `From: ${email.from || 'Unknown sender'}`;
-
-        const rightMeta = document.createElement('div');
-        rightMeta.style.display = 'flex';
-        rightMeta.style.alignItems = 'center';
-        rightMeta.style.gap = '0.25rem';
-
-        const dot = document.createElement('span');
-        dot.className = 'status-dot ' + (email.isRead ? '' : 'unread');
-
-        rightMeta.appendChild(dot);
-
-        if (email.hasAttachment) {
-          const pill = document.createElement('span');
-          pill.className = 'pill';
-          pill.innerHTML = '<span>📎</span> Attachments';
-          rightMeta.appendChild(pill);
-        }
-
-        meta.appendChild(from);
-        meta.appendChild(rightMeta);
-
-        card.appendChild(header);
-        card.appendChild(meta);
-
-        if (email.attachments && email.attachments.length) {
-          const scroller = document.createElement('div');
-          scroller.className = 'attachments-scroller';
-
-          email.attachments.forEach((att) => {
-            const chip = document.createElement('div');
-            chip.className = 'attachment-chip';
-            chip.innerHTML = `<span class="icon">📎</span><span>${att.name || 'Attachment'}</span>`;
-            scroller.appendChild(chip);
-          });
-
-          card.appendChild(scroller);
-        }
-
-        card.addEventListener('click', () => {
-          state.selectedEmail = email;
-          syncTaskWithEmail();
-          renderEmailDetail();
-          renderEmails();
+        fileInput.addEventListener('change', function() {
+            updateFileList();
         });
 
-        itemsContainer.appendChild(card);
-      });
-    }
+        function updateFileList() {
+            const files = fileInput.files;
+            if (files.length === 0) {
+                fileList.innerHTML = '';
+                return;
+            }
 
-    function renderEmailDetail() {
-      const fromEl = document.getElementById('emailFrom');
-      const subjEl = document.getElementById('emailSubject');
-      const bodyEl = document.getElementById('emailBodyHtml');
-      const btnCreateTask = document.getElementById('btnCreateTaskFromEmail');
-      const btnPreview = document.getElementById('btnPreviewTask');
+            let fileNames = '<strong>Selected files:</strong><ul style="margin: 8px 0 0 20px;">';
+            for (let file of files) {
+                fileNames += `<li>${file.name} (${(file.size / 1024).toFixed(2)} KB)</li>`;
+            }
+            fileNames += '</ul>';
+            fileList.innerHTML = fileNames;
+        }
 
-      if (!state.selectedEmail) {
-        fromEl.textContent = 'No email selected';
-        subjEl.textContent = '';
-        bodyEl.innerHTML = 'Select an email from the list to view details.';
-        if (btnCreateTask) btnCreateTask.disabled = true;
-        if (btnPreview) btnPreview.disabled = true;
-        return;
-      }
+        // Form submission
+        document.getElementById('emailForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const messageDiv = document.getElementById('message');
+            const submitBtn = document.querySelector('.btn-submit');
+            
+            try {
+                // Show loading message
+                messageDiv.className = 'message loading';
+                messageDiv.innerHTML = '<span class="spinner"></span>Processing your request...';
+                submitBtn.disabled = true;
 
-      const email = state.selectedEmail;
-      fromEl.innerHTML = `From: <strong>${email.from || 'Unknown sender'}</strong>`;
-      subjEl.textContent = email.subject || '(no subject)';
-      const html = email.bodyHtml || email.body || '';
-      bodyEl.innerHTML = html || '<em>No body content.</em>';
+                // Gather form data
+                const formData = {
+                    email: document.getElementById('emailAddress').value,
+                    title: document.getElementById('taskTitle').value,
+                    description: document.getElementById('taskDescription').value,
+                    priority: document.getElementById('priority').value,
+                    dueDate: document.getElementById('dueDate').value
+                };
 
-      if (btnCreateTask) btnCreateTask.disabled = false;
-      if (btnPreview) btnPreview.disabled = false;
-    }
+                // Handle attachments
+                const files = fileInput.files;
+                const attachments = [];
+                
+                if (files.length > 0) {
+                    for (let file of files) {
+                        const base64 = await fileToBase64(file);
+                        attachments.push({
+                            name: file.name,
+                            content: base64,
+                            size: file.size
+                        });
+                    }
+                }
 
-    function renderTaskForm() {
-      document.getElementById('taskTitle').value = state.task.title;
-      document.getElementById('taskAssignedTo').value = state.task.assignedTo;
-      document.getElementById('taskCopyTo').value = state.task.copyTo;
-      document.getElementById('taskPriority').value = state.task.priority;
-      document.getElementById('taskDescription').value = state.task.description;
-      document.getElementById('taskComments').value = state.task.comments;
-      document.getElementById('taskAckDate').value = state.task.ackDate;
-      document.getElementById('taskDueDate').value = state.task.dueDate;
+                // Step 1: Get Emails (id-ep-1)
+                const emailResponse = await callPowerAutomateFlow(
+                    ENDPOINTS.getEmails,
+                    {
+                        email: formData.email
+                    }
+                );
 
-      const chipsContainer = document.getElementById('taskCategoryChips');
-      chipsContainer.innerHTML = '';
-      if (state.task.categoryLabel) {
-        const chip = document.createElement('span');
-        chip.className = 'chip';
-        chip.textContent = state.task.categoryLabel;
-        chipsContainer.appendChild(chip);
-      }
-    }
+                if (!emailResponse.success) {
+                    throw new Error('Failed to fetch emails');
+                }
 
-    function renderChat() {
-      const log = document.getElementById('chatLog');
-      if (!log) return;
-      log.innerHTML = '';
+                // Step 2: Get Attachments if any (id-ep-2)
+                let attachmentResponse = null;
+                if (attachments.length > 0) {
+                    attachmentResponse = await callPowerAutomateFlow(
+                        ENDPOINTS.getAttachments,
+                        {
+                            attachments: attachments,
+                            email: formData.email
+                        }
+                    );
+                }
 
-      [...state.chatMessages].reverse().forEach((msg) => {
-        const bubble = document.createElement('div');
-        bubble.className = 'chat-bubble ' + (msg.sender === 'User' ? 'user' : 'ai');
+                // Step 3: Email to Task Summary (id-ep-3)
+                const taskResponse = await callPowerAutomateFlow(
+                    ENDPOINTS.emailToTaskSummary,
+                    {
+                        email: formData.email,
+                        title: formData.title,
+                        description: formData.description,
+                        priority: formData.priority,
+                        dueDate: formData.dueDate,
+                        attachments: attachmentResponse ? attachmentResponse.data : []
+                    }
+                );
 
-        const txt = document.createElement('div');
-        txt.textContent = msg.text;
+                if (!taskResponse.success) {
+                    throw new Error('Failed to create task');
+                }
 
-        const meta = document.createElement('div');
-        meta.className = 'chat-meta';
-        meta.textContent = msg.ts instanceof Date ? msg.ts.toLocaleTimeString() : msg.ts;
+                // Step 4: Send Notification (id-ep-4)
+                const notificationResponse = await callPowerAutomateFlow(
+                    ENDPOINTS.sendNotification,
+                    {
+                        email: formData.email,
+                        taskId: taskResponse.data.taskId,
+                        taskTitle: formData.title,
+                        status: 'Task Created Successfully'
+                    }
+                );
 
-        bubble.appendChild(txt);
-        bubble.appendChild(meta);
-        log.appendChild(bubble);
-      });
-    }
+                // Success message
+                messageDiv.className = 'message success';
+                messageDiv.innerHTML = `
+                    ✓ Task created successfully!<br>
+                    <small>Task ID: ${taskResponse.data.taskId}</small>
+                `;
 
-    function openPreviewDialog() {
-      const overlay = document.getElementById('previewOverlay');
-      const previewHtml = document.getElementById('previewHtml');
-      if (!overlay || !previewHtml) return;
-      previewHtml.innerHTML = buildPreviewEmailHtml();
-      overlay.classList.add('visible');
-      state.dialogOpen = true;
-    }
+                // Reset form
+                document.getElementById('emailForm').reset();
+                fileList.innerHTML = '';
 
-    function closePreviewDialog() {
-      const overlay = document.getElementById('previewOverlay');
-      if (!overlay) return;
-      overlay.classList.remove('visible');
-      state.dialogOpen = false;
-    }
-
-    /************************************************************
-     *  FLOW CALLS (Power Automate HTTP endpoints)
-     ************************************************************/
-
-    async function callFlow(url, payload, errorContext) {
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload || {}),
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.innerHTML = `✗ Error: ${error.message}`;
+                console.error('Error:', error);
+            } finally {
+                submitBtn.disabled = false;
+            }
         });
 
-        if (!res.ok) {
-          throw new Error(`Flow error ${res.status}`);
-        }
-        return await res.json();
-      } catch (err) {
-        console.error(`Flow call failed (${errorContext})`, err);
-        notify(`${errorContext} failed. Please try again.`, 'error');
-        throw err;
-      }
-    }
+        // Call Power Automate Flow
+        async function callPowerAutomateFlow(endpoint, payload) {
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': CONTENT_TYPE
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-    async function loadEmails(nextBatch = false) {
-      if (!FLOW_GET_EMAILS_URL || FLOW_GET_EMAILS_URL.includes('YOUR-FLOW-GET-EMAILS-URL')) {
-        // Demo data fallback
-        console.warn('FLOW_GET_EMAILS_URL not configured. Using demo emails.');
-        demoLoadEmails();
-        return;
-      }
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
 
-      setLoading(true);
-      const skip = nextBatch ? state.loadedBatchCount * state.batchSize : 0;
-      try {
-        const payload = {
-          folderPath: state.currentFolder,
-          top: state.batchSize,
-          skip,
-          fetchOnlyUnread: false,
-        };
+                const data = await response.json();
+                return {
+                    success: true,
+                    data: data
+                };
 
-        const data = await callFlow(FLOW_GET_EMAILS_URL, payload, 'Loading emails');
-        const fetched = data.emails || [];
-
-        if (!nextBatch) {
-          state.emails = [];
-          state.loadedBatchCount = 0;
+            } catch (error) {
+                console.error(`Error calling ${endpoint}:`, error);
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
         }
 
-        state.emails = state.emails.concat(
-          fetched.map((e) => ({
-            id: e.Id || e.id,
-            subject: e.Subject || e.subject,
-            from: e.From || e.from,
-            to: e.To || e.to,
-            cc: e.Cc || e.cc,
-            dateTimeReceived: e.DateTimeReceived || e.dateTimeReceived,
-            isRead: e.IsRead ?? e.isRead ?? true,
-            hasAttachment: e.HasAttachment ?? e.hasAttachment ?? false,
-            attachments: e.Attachments || e.attachments || [],
-            bodyHtml: e.BodyHtml || e.bodyHtml,
-            body: e.Body || e.body,
-            bodyPlain: e.BodyPlain || e.bodyPlain || '',
-          }))
-        );
-
-        state.loadedBatchCount = nextBatch ? state.loadedBatchCount + 1 : 1;
-        state.nextBatchAvailable = !!data.nextBatchAvailable;
-        state.filteredEmails = [];
-        notify('Emails loaded successfully.', 'success');
-        renderEmails();
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    async function loadEmailSummary() {
-      if (!state.selectedEmail) {
-        notify('No email selected.', 'error');
-        return;
-      }
-
-      if (!FLOW_EMAIL_SUMMARY_URL || FLOW_EMAIL_SUMMARY_URL.includes('YOUR-FLOW-EMAIL-SUMMARY-URL')) {
-        // Demo fallback
-        notify('AI summary flow URL not configured. Using local demo summary.', 'info');
-        const summary = `Summary of email: ${state.selectedEmail.subject || '(no subject)'}`;
-        state.latestAISummary = summary;
-        document.getElementById('taskDescription').value = summary;
-        state.task.description = summary;
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const data = await callFlow(
-          FLOW_EMAIL_SUMMARY_URL,
-          { emailId: state.selectedEmail.id },
-          'Email AI summarization'
-        );
-
-        const summaryText = data.summary || data.Summary || JSON.stringify(data);
-        state.latestAISummary = summaryText;
-        state.task.description = summaryText;
-        document.getElementById('taskDescription').value = summaryText;
-        notify('Email Summary Generated Successfully', 'success');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    async function sendTaskEmail() {
-      const t = state.task;
-      if (!t.assignedTo) {
-        notify('AssignedTo is required before sending.', 'error');
-        return;
-      }
-      const to = t.assignedTo;
-      const cc = t.copyTo || '';
-      const subject = `${t.title || 'Task from email'} (Ref: ${ensurePreReferenceId()})`;
-      const htmlBody = buildPreviewEmailHtml();
-
-      if (!FLOW_SEND_EMAIL_URL || FLOW_SEND_EMAIL_URL.includes('YOUR-FLOW-SEND-EMAIL-URL')) {
-        console.warn('FLOW_SEND_EMAIL_URL not configured. Skipping actual send.');
-        notify('Preview confirmed (send flow URL not configured).', 'info');
-        closePreviewDialog();
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const data = await callFlow(
-          FLOW_SEND_EMAIL_URL,
-          { to, cc, subject, htmlBody },
-          'Sending notification email'
-        );
-
-        if (data && data.success === false) {
-          throw new Error(data.message || 'Send failed in flow');
+        // Convert file to Base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    resolve(reader.result);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
         }
-        notify('Task email sent successfully.', 'success');
-        resetTaskForm(false);
-        closePreviewDialog();
-      } finally {
-        setLoading(false);
-      }
-    }
 
-    async function sendChatMessage() {
-      const input = document.getElementById('chatInput');
-      const text = (input.value || '').trim();
-      if (!text) return;
+        // Drag and drop functionality
+        const fileInputWrapper = document.querySelector('.file-input-wrapper');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileInputWrapper.addEventListener(eventName, preventDefaults, false);
+        });
 
-      const msg = {
-        id: Date.now(),
-        sender: 'User',
-        text,
-        ts: new Date(),
-      };
-      state.chatMessages.push(msg);
-      input.value = '';
-      renderChat();
-
-      if (!FLOW_AI_CHAT_URL || FLOW_AI_CHAT_URL.includes('YOUR-FLOW-AI-CHAT-URL')) {
-        const echo = {
-          id: Date.now() + 1,
-          sender: 'AI',
-          text: `Demo AI: You said "${text}"` ,
-          ts: new Date(),
-        };
-        state.chatMessages.push(echo);
-        renderChat();
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const payload = {
-          prompt: text,
-          email: state.selectedEmail || null,
-          task: state.task,
-        };
-
-        const data = await callFlow(FLOW_AI_CHAT_URL, payload, 'AI chat');
-        const aiText = data.ai_response || data.response || JSON.stringify(data);
-
-        const aiMsg = {
-          id: Date.now() + 1,
-          sender: 'AI',
-          text: aiText,
-          ts: new Date(),
-        };
-        state.chatMessages.push(aiMsg);
-        renderChat();
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    async function sendEmailCommand(command) {
-      if (!state.selectedEmail) return;
-      if (!FLOW_EMAIL_COMMANDS_URL || FLOW_EMAIL_COMMANDS_URL.includes('YOUR-FLOW-EMAIL-COMMANDS-URL')) {
-        notify(`Email command "${command}" (demo only, flow URL not configured)`, 'info');
-        return;
-      }
-
-      setLoading(true);
-      try {
-        await callFlow(
-          FLOW_EMAIL_COMMANDS_URL,
-          { id: state.selectedEmail.id, command },
-          `Email command ${command}`
-        );
-        notify(`Email ${command} executed successfully.`, 'success');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    /************************************************************
-     *  TASK SYNCHRONIZATION & FORM HANDLERS
-     ************************************************************/
-
-    function syncTaskWithEmail() {
-      const email = state.selectedEmail;
-      if (!email) return;
-      if (!state.task.title) {
-        state.task.title = email.subject || '';
-      }
-      renderTaskForm();
-    }
-
-    function readTaskForm() {
-      state.task.title = document.getElementById('taskTitle').value.trim();
-      state.task.assignedTo = document.getElementById('taskAssignedTo').value.trim();
-      state.task.copyTo = document.getElementById('taskCopyTo').value.trim();
-      state.task.priority = document.getElementById('taskPriority').value;
-      state.task.description = document.getElementById('taskDescription').value;
-      state.task.comments = document.getElementById('taskComments').value;
-      state.task.ackDate = document.getElementById('taskAckDate').value;
-      state.task.dueDate = document.getElementById('taskDueDate').value;
-
-      const catSel = document.getElementById('taskCategory').value;
-      if (catSel) {
-        state.task.categoryCode = catSel.split('-')[0];
-        state.task.categoryLabel = document.getElementById('taskCategory').selectedOptions[0].textContent;
-      } else {
-        state.task.categoryCode = '';
-        state.task.categoryLabel = '';
-      }
-
-      ensurePreReferenceId();
-    }
-
-    function resetTaskForm(clearEmail = false) {
-      state.task = {
-        title: '',
-        categoryCode: '',
-        categoryLabel: '',
-        assignedTo: '',
-        copyTo: '',
-        priority: '',
-        description: '',
-        comments: '',
-        ackDate: '',
-        dueDate: '',
-        preReferenceId: '',
-      };
-      state.latestAISummary = '';
-      if (clearEmail) {
-        state.selectedEmail = null;
-        renderEmailDetail();
-      }
-      document.getElementById('taskCategory').value = '';
-      renderTaskForm();
-      notify('Task form cleared.', 'info');
-    }
-
-    function validateTaskForPreview() {
-      readTaskForm();
-      if (!state.selectedEmail) {
-        notify('No Email Selected, please select an email.', 'error');
-        return false;
-      }
-      if (!state.task.categoryCode) {
-        notify('Please select a Category.', 'error');
-        return false;
-      }
-      if (!state.task.assignedTo) {
-        notify('Please select an assignee.', 'error');
-        return false;
-      }
-      return true;
-    }
-
-    /************************************************************
-     *  DEMO DATA (used when flow URLs are not configured)
-     ************************************************************/
-
-    function demoLoadEmails() {
-      state.emails = [
-        {
-          id: 'demo-1',
-          subject: 'Follow-up on ICT Policy Draft',
-          from: 'info@nitda.gov.ng',
-          to: 'dgs@nitda.gov.ng',
-          cc: '',
-          dateTimeReceived: new Date().toISOString(),
-          isRead: false,
-          hasAttachment: true,
-          attachments: [{ name: 'PolicyDraft.pdf' }],
-          bodyHtml: '<p>Dear DG,</p><p>Please find attached the latest ICT policy draft for your review.</p>',
-          bodyPlain: 'Dear DG, Please find attached the latest ICT policy draft for your review.',
-        },
-        {
-          id: 'demo-2',
-          subject: 'Cybersecurity Compliance Report',
-          from: 'cybersec@nitda.gov.ng',
-          to: 'dgs@nitda.gov.ng',
-          cc: 'info@nitda.gov.ng',
-          dateTimeReceived: new Date(Date.now() - 86400000).toISOString(),
-          isRead: true,
-          hasAttachment: false,
-          attachments: [],
-          bodyHtml: '<p>Kindly see below the summary of cybersecurity compliance for Q3.</p>',
-          bodyPlain: 'Kindly see below the summary of cybersecurity compliance for Q3.',
-        },
-      ];
-      state.filteredEmails = [];
-      state.loadedBatchCount = 1;
-      state.nextBatchAvailable = false;
-      renderEmails();
-    }
-
-    /************************************************************
-     *  EVENT WIRING
-     ************************************************************/
-
-    function wireEvents() {
-      document.getElementById('btnReload').addEventListener('click', () => loadEmails(false));
-
-      document.getElementById('btnNextBatch').addEventListener('click', () => {
-        if (!state.nextBatchAvailable) {
-          notify('No additional batch available from the flow.', 'info');
-          return;
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
         }
-        loadEmails(true);
-      });
 
-      document.getElementById('searchInput').addEventListener('input', (e) => {
-        const q = e.target.value.toLowerCase();
-        if (!q) {
-          state.filteredEmails = [];
-        } else {
-          state.filteredEmails = state.emails.filter((em) => {
-            const subj = (em.subject || '').toLowerCase();
-            const from = (em.from || '').toLowerCase();
-            return subj.includes(q) || from.includes(q);
-          });
-        }
-        renderEmails();
-      });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileInputWrapper.addEventListener(eventName, () => {
+                document.querySelector('.file-input-label').style.borderColor = '#667eea';
+                document.querySelector('.file-input-label').style.background = '#f0f4ff';
+            });
+        });
 
-      document.getElementById('btnFilterInfo').addEventListener('click', () => {
-        state.filterInfoOnly = !state.filterInfoOnly;
-        const btn = document.getElementById('btnFilterInfo');
-        if (state.filterInfoOnly) {
-          btn.classList.add('secondary');
-          state.filteredEmails = state.emails.filter(
-            (e) =>
-              (e.from || '').toLowerCase().includes('info@nitda.gov.ng') ||
-              (e.to || '').toLowerCase().includes('info@nitda.gov.ng') ||
-              (e.cc || '').toLowerCase().includes('info@nitda.gov.ng')
-          );
-        } else {
-          btn.classList.remove('secondary');
-          state.filteredEmails = [];
-        }
-        renderEmails();
-      });
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileInputWrapper.addEventListener(eventName, () => {
+                document.querySelector('.file-input-label').style.borderColor = '#ddd';
+                document.querySelector('.file-input-label').style.background = '#f8f9fa';
+            });
+        });
 
-      document.getElementById('btnCreateTaskFromEmail').addEventListener('click', () => {
-        if (!state.selectedEmail) {
-          notify('No Email Selected, please select an email.', 'error');
-          return;
-        }
-        state.task.title = state.task.title || state.selectedEmail.subject || '';
-        renderTaskForm();
-        notify('Task fields initialized from email.', 'info');
-      });
-
-      document.getElementById('btnPreviewTask').addEventListener('click', () => {
-        if (!state.selectedEmail) {
-          notify('No Email Selected, please select an email.', 'error');
-          return;
-        }
-        loadEmailSummary();
-      });
-
-      document.getElementById('btnClearTask').addEventListener('click', () => resetTaskForm(false));
-
-      document.getElementById('btnInsertSummary').addEventListener('click', () => {
-        if (!state.latestAISummary) {
-          notify('No AI summary available yet.', 'info');
-          return;
-        }
-        const area = document.getElementById('taskDescription');
-        area.value = state.latestAISummary;
-        state.task.description = state.latestAISummary;
-      });
-
-      ['taskTitle', 'taskAssignedTo', 'taskCopyTo', 'taskPriority', 'taskDescription', 'taskComments', 'taskAckDate', 'taskDueDate', 'taskCategory'].forEach(
-        (id) => {
-          const el = document.getElementById(id);
-          if (!el) return;
-          el.addEventListener('change', () => readTaskForm());
-          el.addEventListener('blur', () => readTaskForm());
-        }
-      );
-
-      document.getElementById('btnShowPreviewDialog').addEventListener('click', () => {
-        if (!validateTaskForPreview()) return;
-        openPreviewDialog();
-      });
-
-      document.getElementById('btnResetTask').addEventListener('click', () => resetTaskForm(true));
-
-      document.getElementById('btnConfirmSend').addEventListener('click', () => {
-        sendTaskEmail();
-      });
-
-      document.getElementById('btnReply').addEventListener('click', () => sendEmailCommand('Reply'));
-      document.getElementById('btnForward').addEventListener('click', () => sendEmailCommand('Forward'));
-      document.getElementById('btnMarkRead').addEventListener('click', () => sendEmailCommand('MarkAsRead'));
-      document.getElementById('btnDeleteEmail').addEventListener('click', () => sendEmailCommand('Delete'));
-
-      document.getElementById('btnChatSend').addEventListener('click', sendChatMessage);
-
-      document.getElementById('chatInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendChatMessage();
-        }
-      });
-
-      document.getElementById('btnChatClear').addEventListener('click', () => {
-        state.chatMessages = [
-          {
-            id: 0,
-            sender: 'AI',
-            text: '👋 New conversation started. How can I help?',
-            ts: new Date(),
-          },
-        ];
-        renderChat();
-      });
-
-      document.getElementById('btnChatPreview').addEventListener('click', () => {
-        const text = document.getElementById('chatInput').value.trim();
-        if (!text) {
-          notify('Nothing to preview in chat.', 'info');
-          return;
-        }
-        alert('Preview message:\n\n' + text);
-      });
-
-      document.getElementById('btnChatSummarize').addEventListener('click', () => {
-        if (!state.selectedEmail) {
-          notify('Select an email before summarising.', 'error');
-          return;
-        }
-        document.getElementById('chatInput').value = 'Summarise this email and propose actions.';
-        sendChatMessage();
-      });
-
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && state.dialogOpen) {
-          closePreviewDialog();
-        }
-      });
-    }
-
-    /************************************************************
-     *  INIT
-     ************************************************************/
-
-    function init() {
-      wireEvents();
-      renderTaskForm();
-      renderChat();
-      renderEmailDetail();
-      loadEmails(false);
-    }
-
-    document.addEventListener('DOMContentLoaded', init);
-  </script>
+        fileInputWrapper.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            updateFileList();
+        });
+    </script>
 </body>
 </html>
