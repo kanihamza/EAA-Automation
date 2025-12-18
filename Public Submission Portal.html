@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>NITDA Intelligent Portal – Unified Services</title>
+
+  <!-- External Libraries -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'nitda-green': '#05583B',
+            'nitda-teal': '#00A69D',
+            'nitda-accent': '#E6F6F0'
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif']
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.3s ease-out forwards',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0', transform: 'translateY(5px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    /* Base Styles */
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #020617;
+      color: #e2e8f0;
+    }
+
+    .nav-link.active {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 0.5rem;
+    }
+
+    .form-input {
+      width: 100%;
+      border-radius: 0.75rem;
+      border: 1px solid #334155;
+      background-color: rgba(15, 23, 42, 0.6);
+      color: #f1f5f9;
+      padding: 0.65rem 0.85rem;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: #00A69D;
+      box-shadow: 0 0 0 2px rgba(0, 166, 157, 0.2);
+      background-color: rgba(15, 23, 42, 0.9);
+    }
+    
+    /* File Input Styling */
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+    .file-input-wrapper input[type=file] {
+      font-size: 100px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+    }
+
+    .glass-card {
+      background: rgba(30, 41, 59, 0.4);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .view-section { display: none; animation: fadeIn 0.4s ease-out; }
+    .view-section.active { display: block; }
+
+    html.light body { background-color: #f8fafc; color: #0f172a; }
+    html.light .form-input { background-color: #ffffff; border-color: #cbd5e1; color: #0f172a; }
+    html.light .glass-card { background: rgba(255, 255, 255, 0.8); border-color: #e2e8f0; box-shadow: 0 4px 6px -1px rgba(148, 163, 184, 0.1); }
+    html.light ::-webkit-scrollbar-track { background: #f1f5f9; }
+    html.light ::-webkit-scrollbar-thumb { background: #cbd5e1; }
+    html.light .nav-link.active { color: #05583B; background-color: rgba(5, 88, 59, 0.08); }
+  </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col transition-colors duration-300">
+
+  <!-- ================= HEADER ================= -->
+  <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur-md transition-colors duration-300 dark:border-slate-800 dark:bg-slate-950/80 light:bg-white/80 light:border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex h-16 items-center justify-between">
+        <a href="#" onclick="router.navigate('home')" class="flex items-center gap-2.5 group">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-nitda-green to-emerald-600 text-white shadow-lg shadow-emerald-900/20 transition-transform group-hover:scale-105">
+            <i class="fas fa-shield-alt text-lg"></i>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-sm font-bold tracking-tight text-slate-100 dark:text-slate-100 light:text-slate-900 leading-tight">NITDA Intelligent Portal</span>
+            <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Secure Digital Services</span>
+          </div>
+        </a>
+
+        <nav class="hidden md:flex items-center gap-1">
+          <button onclick="router.navigate('home')" class="nav-link px-3 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors" data-target="home">Home</button>
+          <button onclick="router.navigate('submit')" class="nav-link px-3 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors" data-target="submit">Submit</button>
+          <button onclick="router.navigate('track')" class="nav-link px-3 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors" data-target="track">Track</button>
+          <button onclick="router.navigate('support')" class="nav-link px-3 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors" data-target="support">Support</button>
+          <button onclick="router.navigate('admin')" class="nav-link px-3 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors ml-2" data-target="admin">
+            <i class="fas fa-lock text-xs mr-1 opacity-70"></i>Admin
+          </button>
+        </nav>
+
+        <div class="flex items-center gap-3">
+          <button id="theme-toggle" class="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors light:hover:bg-slate-100 light:hover:text-slate-900">
+            <i class="fas fa-sun text-sm hidden light:block"></i>
+            <i class="fas fa-moon text-sm block light:hidden"></i>
+          </button>
+          <button id="mobile-menu-btn" class="md:hidden rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100">
+            <i class="fas fa-bars text-lg"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div id="mobile-nav" class="hidden md:hidden border-t border-slate-800 bg-slate-950 px-4 py-3 space-y-1">
+      <button onclick="router.navigate('home')" class="block w-full text-left px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 rounded-md">Home</button>
+      <button onclick="router.navigate('submit')" class="block w-full text-left px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 rounded-md">Submit</button>
+      <button onclick="router.navigate('track')" class="block w-full text-left px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 rounded-md">Track</button>
+      <button onclick="router.navigate('support')" class="block w-full text-left px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 rounded-md">Support</button>
+      <button onclick="router.navigate('admin')" class="block w-full text-left px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 rounded-md">Admin Dashboard</button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT AREA ================= -->
+  <main class="flex-1 relative overflow-hidden">
+    
+    <div class="absolute inset-0 z-[-1] overflow-hidden pointer-events-none">
+      <div class="absolute top-0 left-1/4 h-96 w-96 -translate-y-1/2 rounded-full bg-nitda-green/20 blur-[100px]"></div>
+      <div class="absolute bottom-0 right-1/4 h-96 w-96 translate-y-1/2 rounded-full bg-nitda-teal/10 blur-[100px]"></div>
+    </div>
+
+    <!-- 1. HOME VIEW -->
+    <section id="view-home" class="view-section active h-full">
+      <div class="relative pt-16 pb-20 sm:pt-24 sm:pb-32">
+        <div class="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+          <div class="inline-flex items-center rounded-full border border-nitda-teal/30 bg-nitda-teal/10 px-3 py-1 text-xs font-medium text-nitda-teal mb-6">
+            <span class="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-nitda-teal animate-pulse"></span>
+            NITDA e-Government Services
+          </div>
+          <h1 class="text-4xl font-extrabold tracking-tight text-white light:text-slate-900 sm:text-6xl mb-6">
+            Intelligent Document <br class="hidden sm:block" />
+            <span class="bg-gradient-to-r from-nitda-teal to-emerald-400 bg-clip-text text-transparent">Submission & Tracking</span>
+          </h1>
+          <p class="mx-auto mt-6 max-w-2xl text-lg text-slate-400 light:text-slate-600">
+            Securely submit proposals, track regulatory documents, and manage compliance requests through NITDA's centralized digital gateway.
+          </p>
+          <div class="mt-10 flex justify-center gap-4">
+            <button onclick="router.navigate('submit')" class="rounded-xl bg-nitda-green px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 hover:-translate-y-0.5 transition-all">Start Submission</button>
+            <button onclick="router.navigate('track')" class="rounded-xl border border-slate-700 bg-slate-800/50 px-8 py-3.5 text-sm font-semibold text-slate-200 hover:bg-slate-800 hover:text-white transition-all light:bg-white light:text-slate-700 light:border-slate-300 light:hover:bg-slate-50">Track Status</button>
+          </div>
+
+          <div class="mt-24 grid grid-cols-1 gap-8 sm:grid-cols-3">
+            <div class="glass-card rounded-2xl p-8 text-left hover:border-nitda-teal/30 transition-colors">
+              <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
+                <i class="fas fa-file-contract"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-white light:text-slate-900">Digital Submission</h3>
+              <p class="mt-2 text-sm text-slate-400 light:text-slate-600">Submit requests and regulatory documents securely without physical visits.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-8 text-left hover:border-nitda-teal/30 transition-colors">
+              <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                <i class="fas fa-search-location"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-white light:text-slate-900">Real-time Tracking</h3>
+              <p class="mt-2 text-sm text-slate-400 light:text-slate-600">Monitor the progress of your submission across different desks and approval stages.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-8 text-left hover:border-nitda-teal/30 transition-colors">
+              <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400">
+                <i class="fas fa-headset"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-white light:text-slate-900">Support Center</h3>
+              <p class="mt-2 text-sm text-slate-400 light:text-slate-600">Get assistance and resolve issues quickly through our dedicated support channels.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. SUBMIT VIEW (FILE UPLOAD SUPPORTED) -->
+    <section id="view-submit" class="view-section py-12">
+      <div class="max-w-2xl mx-auto px-4 sm:px-6">
+        <div class="text-center mb-10">
+          <h2 class="text-3xl font-bold text-white light:text-slate-900">New Submission</h2>
+          <p class="mt-2 text-sm text-slate-400">Please complete the form below to initiate a new request.</p>
+        </div>
+
+        <div class="glass-card rounded-2xl p-6 sm:p-8">
+          <form id="submit-form" class="space-y-6">
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">First Name</label>
+                <input type="text" name="firstName" required class="form-input" placeholder="Enter first name">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Last Name</label>
+                <input type="text" name="lastName" required class="form-input" placeholder="Enter last name">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Organisation / Company</label>
+              <input type="text" name="organisation" required class="form-input" placeholder="Ministry, Department, or Agency name">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Email Address</label>
+              <input type="email" name="email" required class="form-input" placeholder="official.email@gov.ng">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Document Type</label>
+              <select name="docType" class="form-input cursor-pointer" required>
+                <option value="" disabled selected>Select category...</option>
+                <option value="IT Clearance">IT Project Clearance</option>
+                <option value="Registration">Service Provider Registration</option>
+                <option value="Compliance">Data Protection Compliance</option>
+                <option value="Proposal">General Proposal</option>
+              </select>
+            </div>
+
+            <!-- File Upload Section -->
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Attach Document (PDF, DOCX)</label>
+              <div class="file-input-wrapper form-input flex items-center justify-between cursor-pointer hover:bg-slate-800/50 transition-colors">
+                <span id="file-name-display" class="text-slate-400 italic">No file chosen...</span>
+                <i class="fas fa-paperclip text-slate-500"></i>
+                <input type="file" id="submit-file" name="file" accept=".pdf,.doc,.docx" required>
+              </div>
+              <p class="text-[10px] text-slate-500 mt-1">Max file size: 5MB</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Description / Abstract</label>
+              <textarea name="description" rows="4" class="form-input" placeholder="Briefly describe the purpose of this submission..." required></textarea>
+            </div>
+            
+            <div id="submit-error-box" class="hidden p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs"></div>
+
+            <div class="pt-4">
+              <button type="submit" class="w-full rounded-xl bg-nitda-teal px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-colors disabled:opacity-50">
+                Submit Request
+              </button>
+            </div>
+          </form>
+
+          <div id="submit-success" class="hidden absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center text-center p-8 rounded-2xl z-10">
+            <div class="h-16 w-16 rounded-full bg-green-500/20 flex items-center justify-center text-green-500 mb-4">
+              <i class="fas fa-check text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Submission Received</h3>
+            <p class="text-sm text-slate-300 mb-6 max-w-xs">Your request has been logged successfully. Your Tracking ID is:</p>
+            <div class="bg-slate-800 rounded-lg px-4 py-3 border border-slate-700 mb-6">
+              <code id="new-tracking-id" class="text-emerald-400 font-mono text-lg">NITDA-XXXX-XXXX</code>
+            </div>
+            <button onclick="router.navigate('home')" class="text-sm text-slate-400 hover:text-white underline">Return Home</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. TRACK VIEW -->
+    <section id="view-track" class="view-section py-12">
+      <div class="max-w-3xl mx-auto px-4 sm:px-6">
+        <div class="text-center mb-10">
+          <h2 class="text-3xl font-bold text-white light:text-slate-900">Track Submission</h2>
+          <p class="mt-2 text-sm text-slate-400">Enter your Reference ID to check the real-time status.</p>
+        </div>
+
+        <div id="track-container" class="glass-card rounded-2xl p-6 sm:p-8">
+          <form id="track-form" class="space-y-5">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Tracking Reference ID</label>
+              <input id="trackingId" type="text" class="form-input" placeholder="e.g. NITDA-2025-12345" required>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Email (Optional)</label>
+              <input id="trackEmail" type="email" class="form-input" placeholder="Used for verification">
+            </div>
+            <div id="track-status-box" class="hidden rounded-lg p-3 text-xs"></div>
+            <div class="flex gap-3 pt-2">
+              <button type="submit" id="track-btn" class="flex-1 rounded-xl bg-nitda-green px-4 py-3 text-sm font-semibold text-white shadow-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
+                <span>Track Status</span>
+                <i class="fas fa-arrow-right text-xs"></i>
+              </button>
+            </div>
+          </form>
+
+          <div id="track-loading" class="hidden py-12 text-center">
+            <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-slate-700 border-t-nitda-teal"></div>
+            <p class="mt-3 text-xs text-slate-400 uppercase tracking-widest">Querying Portal...</p>
+          </div>
+
+          <div id="track-result" class="hidden mt-6 pt-6 border-t border-slate-700/50">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <span class="text-[10px] text-slate-500 uppercase tracking-widest">Status</span>
+                <div id="res-status-pill" class="mt-1 inline-flex items-center gap-2 rounded-full bg-blue-500/10 border border-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-400">
+                  <span class="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+                  <span id="res-status-text">In Review</span>
+                </div>
+              </div>
+              <button onclick="resetTrack()" class="text-xs text-slate-400 hover:text-white underline">Track Another</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-sm mb-6">
+              <div class="p-3 rounded-lg bg-slate-900/50 border border-slate-800">
+                <span class="block text-[10px] text-slate-500 uppercase">Document Type</span>
+                <span id="res-doctype" class="font-medium text-slate-200">IT Clearance</span>
+              </div>
+              <div class="p-3 rounded-lg bg-slate-900/50 border border-slate-800">
+                <span class="block text-[10px] text-slate-500 uppercase">Submitted By</span>
+                <span id="res-submitter" class="font-medium text-slate-200">--</span>
+              </div>
+              <div class="col-span-2 p-3 rounded-lg bg-slate-900/50 border border-slate-800">
+                <span class="block text-[10px] text-slate-500 uppercase">Current Desk</span>
+                <span id="res-desk" class="font-medium text-slate-200">Director General's Office</span>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Recent Activity</h4>
+              <div id="res-history" class="relative border-l border-slate-800 ml-2 space-y-6 pb-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. SUPPORT VIEW -->
+    <section id="view-support" class="view-section py-12">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6">
+        <div class="text-center mb-10">
+          <h2 class="text-3xl font-bold text-white light:text-slate-900">Help & Support</h2>
+          <p class="mt-2 text-sm text-slate-400">Find answers to common questions or contact our support team.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <div class="glass-card p-5 rounded-xl">
+              <h3 class="font-semibold text-white mb-2">How do I get an IT Clearance?</h3>
+              <p class="text-sm text-slate-400 leading-relaxed">Submit your project proposal via the 'Submit' tab. Ensure you attach the Bill of Quantities and project charter.</p>
+            </div>
+            <div class="glass-card p-5 rounded-xl">
+              <h3 class="font-semibold text-white mb-2">How long does tracking take to update?</h3>
+              <p class="text-sm text-slate-400 leading-relaxed">Tracking information is real-time. As soon as an officer treats your file, the status updates immediately.</p>
+            </div>
+          </div>
+
+          <div class="glass-card p-6 rounded-2xl h-fit">
+            <h3 class="text-lg font-bold text-white mb-4">Send a Message</h3>
+            <form id="support-form" class="space-y-4">
+              <input type="text" name="name" class="form-input" placeholder="Your Name" required>
+              <input type="email" name="email" class="form-input" placeholder="Your Email" required>
+              <select name="category" class="form-input" required>
+                <option value="Technical Issue">Technical Issue</option>
+                <option value="Submission Enquiry">Submission Enquiry</option>
+                <option value="Other">Other</option>
+              </select>
+              <textarea name="message" rows="3" class="form-input" placeholder="How can we help?" required></textarea>
+              <div id="support-status-box" class="hidden p-2 rounded text-xs"></div>
+              <button type="submit" class="w-full rounded-lg bg-slate-700 hover:bg-slate-600 text-white py-2.5 text-sm font-medium transition-colors disabled:opacity-50">Send Message</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. ADMIN DASHBOARD VIEW (With PIN Protection) -->
+    <section id="view-admin" class="view-section py-8 px-4 sm:px-8 h-full">
+      <div class="max-w-7xl mx-auto h-full flex flex-col">
+        <div class="flex items-center justify-between mb-8">
+          <div>
+            <h2 class="text-2xl font-bold text-white light:text-slate-900">Admin Dashboard</h2>
+            <p class="text-sm text-slate-400">Overview of recent portal submissions</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="adminLogic.fetchData()" class="px-3 py-1.5 text-xs font-medium bg-nitda-teal text-white rounded-lg hover:bg-emerald-600">Refresh Data</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
+          <div class="glass-card p-4 rounded-xl border-l-4 border-nitda-teal">
+            <p class="text-xs text-slate-400 uppercase">Total Submissions</p>
+            <p id="stat-total" class="text-2xl font-bold text-white mt-1">--</p>
+          </div>
+          <div class="glass-card p-4 rounded-xl border-l-4 border-yellow-500">
+            <p class="text-xs text-slate-400 uppercase">Pending Review</p>
+            <p id="stat-pending" class="text-2xl font-bold text-white mt-1">--</p>
+          </div>
+          <div class="glass-card p-4 rounded-xl border-l-4 border-green-500">
+            <p class="text-xs text-slate-400 uppercase">Cleared</p>
+            <p id="stat-cleared" class="text-2xl font-bold text-white mt-1">--</p>
+          </div>
+          <div class="glass-card p-4 rounded-xl border-l-4 border-red-500">
+            <p class="text-xs text-slate-400 uppercase">Queried</p>
+            <p id="stat-queried" class="text-2xl font-bold text-white mt-1">--</p>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-xl overflow-hidden flex-1 min-h-[400px]">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-400">
+              <thead class="bg-slate-900/50 text-xs uppercase font-medium text-slate-300">
+                <tr>
+                  <th class="px-6 py-4">Tracking ID</th>
+                  <th class="px-6 py-4">Organisation</th>
+                  <th class="px-6 py-4">Type</th>
+                  <th class="px-6 py-4">Date</th>
+                  <th class="px-6 py-4">Status</th>
+                  <th class="px-6 py-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="admin-table-body" class="divide-y divide-slate-800">
+                <tr><td colspan="6" class="px-6 py-12 text-center text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i> Loading data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Admin Login Modal -->
+    <div id="admin-login-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/90 backdrop-blur-sm transition-all duration-300">
+      <div class="glass-card p-8 rounded-2xl w-full max-w-sm text-center border border-slate-700 shadow-2xl shadow-black/50">
+        <div class="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4 text-slate-400 ring-1 ring-slate-700">
+          <i class="fas fa-lock"></i>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-2">Admin Access</h3>
+        <p class="text-xs text-slate-400 mb-6">Restricted area. Please enter secure PIN.</p>
+        <form id="admin-login-form" class="space-y-4">
+          <div class="relative">
+            <input type="password" id="admin-pin" class="form-input text-center tracking-[0.5em] text-lg font-bold placeholder:tracking-normal placeholder:font-normal" placeholder="Enter PIN" maxlength="6" required autocomplete="off">
+          </div>
+          <div id="login-error" class="hidden text-xs text-red-400 bg-red-400/10 p-2 rounded border border-red-400/20">
+            <i class="fas fa-circle-exclamation mr-1"></i> Invalid Access PIN (Try 1234)
+          </div>
+          <div class="flex gap-2 pt-2">
+            <button type="button" onclick="document.getElementById('admin-login-modal').classList.add('hidden')" class="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-400 text-xs font-medium hover:bg-slate-800 hover:text-white transition-colors">Cancel</button>
+            <button type="submit" class="flex-1 py-2.5 rounded-xl bg-nitda-teal text-white text-xs font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-colors">Unlock Dashboard</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-slate-800 bg-slate-950 py-6 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
+      <p>&copy; 2025 National Information Technology Development Agency (NITDA).</p>
+      <div class="flex gap-4 mt-2 sm:mt-0">
+        <a href="#" class="hover:text-slate-300">Privacy Policy</a>
+        <a href="#" class="hover:text-slate-300">Terms of Service</a>
+        <a href="#" class="hover:text-slate-300">Help</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // =========================================================================
+    // 1. CONFIGURATION
+    // 
+    // INSTRUCTIONS:
+    // Create your 4 flows using the provided configuration guide.
+    // Copy the "HTTP POST URL" from each flow's trigger and paste below.
+    // =========================================================================
+    const CONFIG = {
+      SUBMIT_FLOW_URL: "",  // Paste "New Submission" Flow URL here
+      TRACK_FLOW_URL: "",   // Paste "Track Submission" Flow URL here
+      ADMIN_FLOW_URL: "",   // Paste "Admin Dashboard" Flow URL here
+      SUPPORT_FLOW_URL: "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/3fc71cc29d15481291fd341def327572/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=FUeporOryvRDWA7z561j4LsLY4ey3YjUsgUCIqhEzyU"  // Paste "Support Ticket" Flow URL here
+    };
+
+    // --- 2. ROUTER & NAVIGATION ---
+    const router = {
+      init: () => {
+        window.addEventListener('popstate', (e) => {
+          if(e.state && e.state.view) router.show(e.state.view);
+        });
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+           document.getElementById('mobile-nav').classList.toggle('hidden');
+        });
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark');
+          document.documentElement.classList.toggle('light');
+        });
+        router.navigate('home', true);
+      },
+
+      navigate: (viewName, replace = false) => {
+        // Admin Security Check
+        if (viewName === 'admin' && !adminLogic.isLoggedIn) {
+            document.getElementById('admin-login-modal').classList.remove('hidden');
+            document.getElementById('mobile-nav').classList.add('hidden');
+            setTimeout(() => document.getElementById('admin-pin').focus(), 100);
+            return;
+        }
+        if (!replace) history.pushState({ view: viewName }, '', `#${viewName}`);
+        router.show(viewName);
+        document.getElementById('mobile-nav').classList.add('hidden');
+      },
+
+      show: (viewName) => {
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        const target = document.getElementById(`view-${viewName}`);
+        if(target) target.classList.add('active');
+        document.querySelectorAll('.nav-link').forEach(btn => {
+          if(btn.dataset.target === viewName) btn.classList.add('active');
+          else btn.classList.remove('active');
+        });
+        // Auto-fetch admin data when view opens
+        if(viewName === 'admin') {
+            adminLogic.fetchData();
+        }
+      }
+    };
+
+    // --- 3. TRACKING LOGIC ---
+    const trackLogic = {
+      init: () => {
+        document.getElementById('track-form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const id = document.getElementById('trackingId').value.trim();
+          const email = document.getElementById('trackEmail').value.trim();
+          if(!id) return alert("Please enter a Tracking ID");
+
+          trackLogic.setLoading(true);
+          try {
+            if(!CONFIG.TRACK_FLOW_URL) throw new Error("Tracking service not available (Flow URL missing)");
+            const response = await fetch(CONFIG.TRACK_FLOW_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ trackingId: id, emailAddress: email || "" })
+            });
+            if (!response.ok) throw new Error(`Server returned ${response.status}`);
+            const data = await response.json();
+            trackLogic.renderResult(data);
+          } catch (error) {
+            document.getElementById('track-status-box').innerHTML = `<span class="font-bold">Error:</span> ${error.message}`;
+            document.getElementById('track-status-box').className = "rounded-lg p-3 text-xs bg-red-500/10 text-red-400 border border-red-500/20 block";
+            document.getElementById('track-status-box').classList.remove('hidden');
+          } finally {
+            trackLogic.setLoading(false);
+          }
+        });
+      },
+      setLoading: (isLoading) => {
+        const form = document.getElementById('track-form');
+        const loader = document.getElementById('track-loading');
+        const result = document.getElementById('track-result');
+        const statusBox = document.getElementById('track-status-box');
+        if (isLoading) {
+          form.classList.add('opacity-50', 'pointer-events-none');
+          loader.classList.remove('hidden');
+          result.classList.add('hidden');
+          statusBox.classList.add('hidden');
+        } else {
+          form.classList.remove('opacity-50', 'pointer-events-none');
+          loader.classList.add('hidden');
+        }
+      },
+      renderResult: (data) => {
+        const resDiv = document.getElementById('track-result');
+        document.getElementById('track-form').classList.add('hidden');
+        document.getElementById('res-status-text').textContent = data.status || "Submitted";
+        document.getElementById('res-doctype').textContent = data.documentType || "N/A";
+        document.getElementById('res-submitter').textContent = data.submitterName || "N/A";
+        document.getElementById('res-desk').textContent = data.currentDesk || "Processing";
+        
+        const historyContainer = document.getElementById('res-history');
+        const historyData = data.history || [];
+        if(historyData.length > 0) {
+            historyContainer.innerHTML = historyData.map(item => `
+              <div class="relative pl-6">
+                <div class="absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-slate-900 bg-nitda-teal"></div>
+                <p class="text-xs font-semibold text-slate-300">${item.desk || item.Desk}</p>
+                <p class="text-[10px] text-slate-500">${item.status || item.Status} &bull; ${item.timestamp || item.Timestamp || ''}</p>
+              </div>`).join('');
+        } else {
+            historyContainer.innerHTML = `<p class="text-xs text-slate-500 italic pl-4">No detailed history available yet.</p>`;
+        }
+        resDiv.classList.remove('hidden');
+        resDiv.classList.add('animate-fade-in');
+      }
+    };
+    window.resetTrack = () => {
+      document.getElementById('track-form').classList.remove('hidden');
+      document.getElementById('track-result').classList.add('hidden');
+      document.getElementById('track-status-box').classList.add('hidden');
+      document.getElementById('track-form').reset();
+    };
+
+    // --- 4. SUBMIT LOGIC (FILE HANDLING) ---
+    const submitLogic = {
+      init: () => {
+        document.getElementById('submit-file').addEventListener('change', (e) => {
+            const fileName = e.target.files[0] ? e.target.files[0].name : 'No file chosen...';
+            const display = document.getElementById('file-name-display');
+            display.innerText = fileName;
+            display.classList.remove('text-slate-400', 'italic');
+            display.classList.add('text-slate-200');
+        });
+
+        document.getElementById('submit-form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const btn = e.target.querySelector('button[type="submit"]');
+          const errorBox = document.getElementById('submit-error-box');
+          const originalText = btn.innerText;
+          errorBox.classList.add('hidden');
+          btn.disabled = true;
+          btn.innerText = "Processing...";
+
+          const formData = new FormData(e.target);
+          const payload = Object.fromEntries(formData.entries());
+          
+          // File to Base64 Conversion
+          const fileInput = document.getElementById('submit-file');
+          if (fileInput.files.length > 0) {
+              try {
+                  const fileData = await submitLogic.toBase64(fileInput.files[0]);
+                  payload.fileName = fileInput.files[0].name;
+                  payload.fileContent = fileData; // Send Base64 string to Flow
+                  delete payload.file;
+              } catch(err) {
+                  errorBox.textContent = "Error processing file upload.";
+                  errorBox.classList.remove('hidden');
+                  btn.disabled = false;
+                  btn.innerText = originalText;
+                  return;
+              }
+          }
+
+          try {
+            let trackingId;
+            if(!CONFIG.SUBMIT_FLOW_URL) {
+                // Simulation Mode
+                console.warn("No Submit URL. Simulating.");
+                await new Promise(r => setTimeout(r, 1500));
+                trackingId = `NITDA-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+            } else {
+                const response = await fetch(CONFIG.SUBMIT_FLOW_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error('Submission failed. Server returned ' + response.status);
+                const result = await response.json();
+                trackingId = result.trackingId || "PENDING";
+            }
+            document.getElementById('submit-success').classList.remove('hidden');
+            document.getElementById('new-tracking-id').innerText = trackingId;
+            e.target.reset();
+            document.getElementById('file-name-display').innerText = 'No file chosen...';
+          } catch (err) {
+            errorBox.textContent = "Error: " + err.message;
+            errorBox.classList.remove('hidden');
+          } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+          }
+        });
+      },
+      toBase64: (file) => new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+              // Strip metadata prefix (e.g., "data:application/pdf;base64,")
+              const rawBase64 = reader.result.split(',')[1]; 
+              resolve(rawBase64);
+          };
+          reader.onerror = error => reject(error);
+      })
+    };
+
+    // --- 5. SUPPORT LOGIC ---
+    const supportLogic = {
+      init: () => {
+          const form = document.getElementById('support-form');
+          form.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              const btn = e.target.querySelector('button[type="submit"]');
+              const statusBox = document.getElementById('support-status-box');
+              const originalText = btn.innerText;
+              btn.disabled = true;
+              btn.innerText = "Sending...";
+              statusBox.classList.add('hidden');
+              
+              const payload = Object.fromEntries(new FormData(e.target).entries());
+              try {
+                  if(!CONFIG.SUPPORT_FLOW_URL) await new Promise(r => setTimeout(r, 1000));
+                  else {
+                      const response = await fetch(CONFIG.SUPPORT_FLOW_URL, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(payload)
+                      });
+                      if(!response.ok) throw new Error("Failed");
+                  }
+                  statusBox.innerText = "Message sent successfully!";
+                  statusBox.className = "p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-xs block";
+                  e.target.reset();
+              } catch(err) {
+                  statusBox.innerText = "Error sending message.";
+                  statusBox.className = "p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs block";
+              } finally {
+                  btn.disabled = false;
+                  btn.innerText = originalText;
+                  statusBox.classList.remove('hidden');
+              }
+          });
+      }
+    };
+
+    // --- 6. ADMIN LOGIC ---
+    const adminLogic = {
+        isLoggedIn: false,
+        initLogin: () => {
+             document.getElementById('admin-login-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const pin = document.getElementById('admin-pin').value;
+                // DEFAULT PIN: 1234
+                if(pin === "1234") {
+                    adminLogic.isLoggedIn = true;
+                    document.getElementById('admin-login-modal').classList.add('hidden');
+                    document.getElementById('login-error').classList.add('hidden');
+                    e.target.reset();
+                    router.navigate('admin');
+                } else {
+                    document.getElementById('login-error').classList.remove('hidden');
+                    document.getElementById('admin-pin').value = "";
+                }
+             });
+        },
+        fetchData: async () => {
+            const tbody = document.getElementById('admin-table-body');
+            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i> Fetching records...</td></tr>`;
+            try {
+                let items = [];
+                if(!CONFIG.ADMIN_FLOW_URL) {
+                    // Fallback Mock Data
+                    await new Promise(r => setTimeout(r, 800));
+                    items = [
+                        { trackingId: 'NITDA-8921', organisation: 'Ministry of Aviation', docType: 'IT Clearance', date: 'Oct 24, 2024', status: 'In Review' },
+                        { trackingId: 'NITDA-8922', organisation: 'FIRS HQ', docType: 'Infrastructure Upgrade', date: 'Oct 23, 2024', status: 'Approved' },
+                        { trackingId: 'NITDA-8925', organisation: 'NCC', docType: 'Software License', date: 'Oct 22, 2024', status: 'Rejected' },
+                        { trackingId: 'NITDA-8928', organisation: 'NITDA', docType: 'Compliance', date: 'Oct 21, 2024', status: 'In Review' }
+                    ];
+                } else {
+                    const response = await fetch(CONFIG.ADMIN_FLOW_URL);
+                    if(!response.ok) throw new Error("Failed");
+                    const result = await response.json();
+                    items = result.items || [];
+                }
+                adminLogic.renderTable(items);
+                adminLogic.calculateStats(items);
+            } catch(err) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-red-400">Error loading data.</td></tr>`;
+            }
+        },
+        calculateStats: (items) => {
+            let stats = { total: items.length, pending: 0, cleared: 0, queried: 0 };
+            items.forEach(item => {
+                const status = (item.status || "").toLowerCase();
+                if(status.includes('review') || status.includes('submitted')) stats.pending++;
+                else if(status.includes('approved') || status.includes('cleared')) stats.cleared++;
+                else if(status.includes('rejected') || status.includes('queried')) stats.queried++;
+            });
+            document.getElementById('stat-total').innerText = stats.total.toLocaleString();
+            document.getElementById('stat-pending').innerText = stats.pending.toLocaleString();
+            document.getElementById('stat-cleared').innerText = stats.cleared.toLocaleString();
+            document.getElementById('stat-queried').innerText = stats.queried.toLocaleString();
+        },
+        renderTable: (items) => {
+            const tbody = document.getElementById('admin-table-body');
+            if(items.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-slate-500">No records found.</td></tr>`; return; }
+            tbody.innerHTML = items.map(item => {
+                let statusColor = "bg-slate-500/10 text-slate-400";
+                const s = (item.status || "").toLowerCase();
+                if(s.includes('approved') || s.includes('cleared')) statusColor = "bg-green-500/10 text-green-500 ring-1 ring-inset ring-green-500/20";
+                else if(s.includes('review')) statusColor = "bg-yellow-500/10 text-yellow-500 ring-1 ring-inset ring-yellow-500/20";
+                else if(s.includes('rejected') || s.includes('queried')) statusColor = "bg-red-500/10 text-red-500 ring-1 ring-inset ring-red-500/20";
+                return `<tr class="hover:bg-slate-800/30 transition-colors">
+                  <td class="px-6 py-4 font-mono text-emerald-400">${item.trackingId}</td>
+                  <td class="px-6 py-4 text-slate-200 font-medium">${item.organisation}</td>
+                  <td class="px-6 py-4">${item.docType}</td>
+                  <td class="px-6 py-4 text-slate-400">${item.date}</td>
+                  <td class="px-6 py-4"><span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusColor}">${item.status}</span></td>
+                  <td class="px-6 py-4 text-right"><button class="text-slate-400 hover:text-white"><i class="fas fa-ellipsis-v"></i></button></td>
+                </tr>`;
+            }).join('');
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      router.init();
+      trackLogic.init();
+      submitLogic.init();
+      supportLogic.init();
+      adminLogic.initLogin();
+      document.documentElement.classList.add('dark');
+    });
+  </script>
+</body>
+</html>

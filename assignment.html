@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DGCEO Digital OPS - Validated</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <style>
+    :root {
+      --brand-primary: #008751;
+      --brand-primary-soft: #e1f6eb;
+      --brand-secondary: #00a69d;
+      --danger: #9f1d1d;
+      --accent-orange: #e96300;
+      --bg-main: #f4f7f5;
+      --bg-card: #ffffff;
+      --bg-card-soft: #edf8f2;
+      --border-soft: #c7e2d5;
+      --text-main: #024029;
+      --text-muted: #6b7280;
+      --radius-lg: 12px;
+      --radius-md: 8px;
+      --radius-pill: 999px;
+      --shadow-soft: 0 4px 12px rgba(0,0,0,0.05);
+      --font: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { margin:0; font-family:var(--font); background:var(--bg-main); color:var(--text-main); height:100vh; overflow:hidden; }
+    ::-webkit-scrollbar { width:6px; height:6px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:#ccc; border-radius:4px; }
+    ::-webkit-scrollbar-thumb:hover { background:var(--brand-secondary); }
+
+    .shell{ display:flex; flex-direction:column; height:100vh; background: radial-gradient(circle at top left, #f3faf6, #f4f7f5 55%, #e9f3ed 100%); }
+    .shell-header{ background:var(--brand-primary); color:#fff; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-shrink:0; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+    .shell-header-left{ display:flex; gap:12px; align-items:center; }
+    .logo-pill{ width:36px; height:36px; border-radius:50%; background:#fff; color:var(--brand-primary); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; box-shadow:0 2px 4px rgba(0,0,0,0.2); }
+    .tag{ padding:4px 10px; border-radius:var(--radius-pill); border:1px solid rgba(255,255,255,0.4); background:rgba(255,255,255,0.1); font-size:11px; }
+
+    .screen{ display:none; flex:1; padding:16px; max-width:1400px; margin:0 auto; width:100%; overflow-y:auto; overflow-x:hidden; flex-direction:column; }
+    .screen.active{ display:flex; animation:fadeIn .3s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to{opacity:1; transform:translateY(0);} }
+
+    .activities-header-row{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; justify-content:space-between; align-items:center; }
+    .nav-chip{ background:#fff; border:1px solid var(--border-soft); border-radius:20px; padding:8px 14px; font-weight:600; display:flex; gap:8px; align-items:center; font-size:13px; box-shadow:var(--shadow-soft); color:var(--brand-primary); }
+    .activities-seg{ display:flex; background:#fff; border:1px solid var(--border-soft); border-radius:20px; overflow:hidden; box-shadow:var(--shadow-soft); }
+    .seg-btn{ border:none; padding:8px 16px; background:#fff; cursor:pointer; font-size:13px; font-weight:500; border-right:1px solid #eee; color:var(--text-muted); transition:all .2s; }
+    .seg-btn:last-child{ border-right:none; }
+    .seg-btn:hover{ background:#f9f9f9; }
+    .seg-btn.active{ background:var(--brand-primary); color:#fff; font-weight:600; }
+
+    .search-input{ width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-soft); box-shadow:var(--shadow-soft); outline:none; font-size:14px; background:#fff; margin-bottom:16px; transition:border .2s; }
+    .search-input:focus{ border-color:var(--brand-primary); }
+
+    .activities-body{ display:grid; grid-template-columns:1fr 400px; gap:16px; flex:1; min-height:0; }
+    @media(max-width:1000px){ .activities-body{ grid-template-columns:1fr; } }
+    .list-scroll{ overflow-y:auto; padding-right:4px; }
+
+    .activity-card{ background:#fff; border:1px solid #eee; border-left:4px solid var(--brand-secondary); border-radius:var(--radius-md); padding:14px; display:flex; flex-direction:column; gap:10px; box-shadow:0 2px 5px rgba(0,0,0,0.03); margin-bottom:12px; cursor:pointer; transition:transform .2s, box-shadow .2s; }
+    .activity-card:hover{ transform:translateY(-2px); box-shadow:0 5px 15px rgba(0,0,0,0.08); }
+    .card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+    .activity-title{ font-weight:700; font-size:14px; line-height:1.4; flex:1; }
+    .activity-meta-card{ background:#f9fafb; padding:6px 10px; border-radius:6px; display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); border:1px solid #f0f0f0; }
+
+    .activity-status-tag{ font-size:10px; text-transform:uppercase; letter-spacing:.5px; padding:3px 8px; border-radius:4px; background:#f3f4f6; font-weight:700; color:#4b5563; }
+    .activity-status-tag.treated{ background:#dcfce7; color:#166534; }
+    .activity-status-tag.unknown{ background:#fee2e2; color:#991b1b; }
+
+    .card-actions{ display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+    .btn-pill{ border-radius:6px; padding:6px 12px; border:none; cursor:pointer; font-size:11px; font-weight:600; transition:opacity .2s; }
+    .btn-pill:hover{ opacity:.9; }
+    .btn-pill.btn-green{ background:var(--brand-primary); color:#fff; }
+    .btn-pill.btn-dark{ background:#374151; color:#fff; }
+    .btn-pill.btn-orange{ background:var(--accent-orange); color:#fff; }
+    .btn-pill.btn-outline{ background:#fff; color:var(--brand-primary); border:1px solid var(--brand-primary); }
+
+    .details-pane{ background:#fff; border:1px solid var(--border-soft); border-top:4px solid var(--brand-primary); border-radius:var(--radius-lg); padding:16px; overflow-y:auto; box-shadow:var(--shadow-soft); display:flex; flex-direction:column; }
+    @media(max-width:1000px){
+      .details-pane{ position:fixed; inset:0; z-index:1500; margin:0; border-radius:0; display:none; animation:slideUp .3s ease; }
+      .details-pane.mobile-visible{ display:flex; }
+    }
+    @keyframes slideUp{ from{ transform:translateY(100%);} to{ transform:translateY(0);} }
+    .details-row{ margin-bottom:12px; border-bottom:1px solid #f0f0f0; padding-bottom:8px; }
+    .details-row:last-child{ border-bottom:none; }
+    .details-label{ font-size:11px; color:var(--text-muted); text-transform:uppercase; margin-bottom:2px; }
+    .details-val{ font-size:13px; font-weight:500; line-height:1.5; }
+
+    .screen-toolbar{ display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; flex-shrink:0; }
+    .toolbar-btn{ padding:10px 16px; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:6px; box-shadow:0 1px 2px rgba(0,0,0,0.05); transition:background .2s; }
+    .toolbar-btn.primary{ background:var(--brand-primary); color:#fff; }
+    .toolbar-btn.secondary{ background:#fff; color:var(--text-main); border:1px solid #d1d5db; }
+    .toolbar-btn.destructive{ background:#fee2e2; color:#991b1b; }
+    .toolbar-btn:hover{ filter:brightness(.95); }
+
+    .assignment-layout{ display:grid; grid-template-columns:1fr 1fr; gap:16px; flex:1; min-height:0; overflow:hidden; }
+    @media(max-width:900px){ .assignment-layout{ grid-template-columns:1fr; overflow-y:auto; } }
+    .pane{ background:#fff; border-radius:12px; border:1px solid var(--border-soft); padding:16px; overflow-y:auto; box-shadow:var(--shadow-soft); display:flex; flex-direction:column; }
+
+    .table{ width:100%; border-collapse:collapse; font-size:13px; }
+    .table th{ background:#f3f4f6; color:#374151; padding:8px 10px; text-align:left; font-size:12px; border-bottom:2px solid #e5e7eb; }
+    .table td{ padding:8px 10px; border-bottom:1px solid #f3f4f6; vertical-align:top; }
+    .table tr:last-child td{ border-bottom:none; }
+
+    .label-block{ background:#ecfdf5; border:1px solid #d1fae5; color:#065f46; border-radius:8px; padding:8px 10px; font-size:12px; margin-bottom:8px; }
+    .field-label{ font-size:12px; font-weight:600; margin-top:12px; margin-bottom:4px; color:#374151; }
+
+    .select-input{ width:100%; padding:10px; border-radius:8px; border:1px solid #d1d5db; font-size:13px; background:#fff; appearance:none;
+      background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+      background-repeat:no-repeat; background-position:right .7em top 50%; background-size:.65em auto; }
+
+    .chip-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+    .chip-btn{ border-radius:20px; border:1px solid var(--border-soft); background:#fff; padding:6px 12px; font-size:12px; cursor:pointer; color:#374151; transition:all .2s; }
+    .chip-btn:hover{ background:#f3f4f6; }
+    .chip-btn.active{ background:var(--brand-primary); color:#fff; border-color:var(--brand-primary); }
+
+    .cc-options-list{ max-height:120px; overflow-y:auto; border:1px solid #d1d5db; border-radius:8px; margin-top:4px; background:#fff; font-size:12px; }
+    .cc-option-item{ padding:8px; border-bottom:1px solid #f3f4f6; cursor:pointer; }
+    .cc-option-item:hover{ background:#f0fdf4; color:var(--brand-primary); }
+
+    .cc-selected-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; font-size:11px; }
+    .cc-chip{ display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:12px; background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; }
+    .cc-chip button{ border:none; background:transparent; cursor:pointer; color:#0369a1; font-weight:bold; font-size:14px; padding:0; line-height:1; }
+
+    .comments-editor{ background:#fff; border-radius:12px; border:1px solid var(--border-soft); display:flex; flex-direction:column; flex:1; box-shadow:var(--shadow-soft); padding:16px; }
+    .editor-area{ flex:1; padding:12px; border:1px solid #e5e7eb; border-radius:8px; outline:none; font-size:14px; resize:none; font-family:inherit; }
+    .editor-area:focus{ border-color:var(--brand-primary); }
+
+    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px); display:none; align-items:center; justify-content:center; z-index:2000; opacity:0; transition:opacity .2s; }
+    .overlay.visible{ display:flex; opacity:1; }
+    .dialog{ background:#fff; padding:24px; border-radius:16px; width:min(450px, 90%); text-align:center; box-shadow:0 10px 25px rgba(0,0,0,0.2); transform:scale(.9); transition:transform .2s; }
+    .overlay.visible .dialog{ transform:scale(1); }
+
+    .btn-big{ padding:12px 24px; border-radius:30px; border:none; font-weight:600; cursor:pointer; color:#fff; font-size:14px; min-width:100px; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
+    .btn-big.primary{ background:var(--brand-primary); }
+    .btn-big.cancel { background:#9ca3af; }
+
+    .btn-big:hover{ opacity:.9; transform:translateY(-1px); }
+
+    .toast{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(100px); background:#374151; color:#fff; padding:10px 20px; border-radius:30px; font-size:13px; z-index:3000; transition:transform .3s ease; box-shadow:0 4px 12px rgba(0,0,0,0.2); }
+    .toast.show{ transform:translateX(-50%) translateY(0); }
+  </style>
+</head>
+
+<body>
+<div class="shell">
+  <!-- HEADER -->
+  <header class="shell-header">
+    <div class="shell-header-left">
+      <div class="logo-pill">D</div>
+      <div>
+        <div style="font-weight:700;font-size:15px;letter-spacing:-0.5px;">DGCEO Digital OPS</div>
+        <div style="font-size:11px;opacity:0.85;margin-top:2px;">Activities Management & Assignment</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+      <div class="tag">User: <strong>DG Office</strong></div>
+      <div class="tag" id="currentScreenTag">Activities</div>
+    </div>
+  </header>
+
+  <!-- ACTIVITIES SCREEN -->
+  <main class="screen active" id="screen-activities">
+    <div class="activities-header-row">
+      <div class="activities-seg">
+        <button id="seg-all" class="seg-btn active" type="button" onclick="setFilter('All')">All</button>
+        <button id="seg-treated" class="seg-btn" type="button" onclick="setFilter('Treated')">Treated</button>
+        <button id="seg-nottreated" class="seg-btn" type="button" onclick="setFilter('NotTreated')">Not Treated</button>
+        <button class="seg-btn" type="button" onclick="openFiltersOverlay()">Filters +</button>
+      </div>
+
+      <div class="nav-chip">
+        <span>📅</span>
+        <span id="dateDisplay">Loading date...</span>
+      </div>
+    </div>
+
+    <input id="searchBox" class="search-input" placeholder="Search by Title, Category or ID..."
+           oninput="onSearchChange(this.value)" />
+
+    <div class="activities-body">
+      <div class="list-scroll" id="activitiesList"></div>
+
+      <aside class="details-pane" id="detailsPane">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 id="detailsTitle" style="margin:0;font-size:16px;color:var(--brand-primary);">Details</h3>
+          <button type="button"
+                  style="border:none;background:#f3f4f6;color:#374151;padding:6px 12px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;"
+                  onclick="toggleDetails(false)">Close</button>
+        </div>
+        <div id="detailsBody">
+          <p class="text-muted" style="text-align:center;margin-top:40px;">Select an activity to view details.</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- ASSIGNMENT SCREEN -->
+  <main class="screen" id="screen-assignment">
+    <div class="screen-toolbar">
+      <button class="toolbar-btn secondary" type="button" onclick="navigate('activities')">✖ Cancel</button>
+      <button class="toolbar-btn secondary" type="button" onclick="navigate('category')">✏ Edit Details</button>
+      <button class="toolbar-btn primary" type="button" onclick="previewAssignment()">👁 Refresh Preview</button>
+      <!-- Submit moved out of toolbar -->
+    </div>
+
+    <div class="assignment-layout">
+      <section class="pane">
+        <h3 style="margin-top:0;color:var(--brand-primary);">
+          Status: <span id="assignmentStatusLabel">Reviewing...</span>
+        </h3>
+        <table class="table">
+          <thead><tr><th style="width:120px;">Field</th><th>Details</th></tr></thead>
+          <tbody id="assignmentTableBody"></tbody>
+        </table>
+      </section>
+
+      <section class="pane">
+        <h3 style="margin-top:0;text-align:center;">Email Notification Preview</h3>
+        <div style="background:#f9fafb;padding:16px;border-radius:8px;border:1px solid #e5e7eb;flex:1;">
+          <div id="previewEmailBody" style="font-size:13px;line-height:1.6;font-family:serif;color:#000;"></div>
+        </div>
+        <p class="text-muted" style="font-size:11px;text-align:center;margin-top:8px;">Generated by System Logic</p>
+
+        <!-- Submit button relocated here -->
+        <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+          <button class="toolbar-btn primary" type="button" style="background:#166534;" onclick="submitAssignment()">
+            📤 Submit Assignment
+          </button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- COMMENTS SCREEN -->
+  <main class="screen" id="screen-comments">
+    <div class="screen-toolbar">
+      <button class="toolbar-btn primary" type="button" onclick="saveComments()">💾 Save Comments</button>
+      <button class="toolbar-btn destructive" type="button" onclick="navigate('category')">✖ Cancel</button>
+    </div>
+
+    <div class="comments-editor">
+      <div style="padding-bottom:12px;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;margin-bottom:12px;">
+        Add/Edit Comments
+      </div>
+      <textarea id="commentsBox" class="editor-area" placeholder="Type comments here..."></textarea>
+    </div>
+  </main>
+
+  <!-- CATEGORY / CONFIG SCREEN -->
+  <main class="screen" id="screen-category">
+    <div class="screen-toolbar">
+      <button class="toolbar-btn secondary"   type="button" onclick="navigate('activities')">✖ Cancel</button>
+      <button class="toolbar-btn destructive" type="button" onclick="clearAssignmentEntries()">🗑 Clear Form</button>
+      <button class="toolbar-btn primary"     type="button" onclick="navigate('comments')">💬 Comments</button>
+      <button class="toolbar-btn primary"     type="button" style="margin-left:auto;background:#000;" onclick="navigate('assignment')">
+        Next: Preview →
+      </button>
+    </div>
+
+    <div class="assignment-layout">
+      <!-- LEFT: Controls -->
+      <section class="pane">
+        <h3 style="margin-top:0;">Assignment Controls</h3>
+
+        <div>
+          <div class="field-label">Category (Drives auto-assignment)</div>
+          <select id="categorySelect" class="select-input" onchange="onCategoryChange(this.value)">
+            <option value="">Select Category</option>
+          </select>
+
+          <div class="field-label">Subcategory</div>
+          <select id="subcategorySelect" class="select-input" onchange="onSubcategoryChange(this.value)">
+            <option value="">Select Subcategory</option>
+          </select>
+        </div>
+
+        <div style="margin-top:16px;">
+          <div class="label-block">
+            <strong>Assigned To:</strong> <span id="assignedToLabel">...</span>
+          </div>
+          <div class="label-block">
+            <strong>Co-Assigned:</strong> <span id="coAssignedToLabel">...</span>
+          </div>
+        </div>
+
+        <details style="margin-top:10px;border:1px solid #eee;border-radius:8px;padding:8px;">
+          <summary style="font-size:12px;font-weight:600;cursor:pointer;color:var(--brand-primary);">Override Assignments ▾</summary>
+          <div class="field-label">Override Assigned To</div>
+          <select id="assignedToSelect" class="select-input" onchange="onAssignedToOverride(this.value)">
+            <option value="">(use default)</option>
+          </select>
+
+          <div class="field-label">Override Co-Assigned</div>
+          <select id="coAssignedToSelect" class="select-input" onchange="onCoAssignedToOverride(this.value)">
+            <option value="">(use default)</option>
+          </select>
+        </details>
+
+        <div class="field-label">Cc To (Search Departments/Staff)</div>
+        <input id="ccSearchBox" class="search-input" style="padding:8px;font-size:12px;"
+               placeholder="Type to search..." oninput="searchCCOptions(this.value)" />
+        <div id="ccOptionsList" class="cc-options-list"></div>
+        <div id="ccSelectedChips" class="cc-selected-chips"></div>
+
+        <div class="field-label">Priority</div>
+        <div class="chip-row">
+          <button type="button" class="chip-btn" onclick="setPriority('P1 (High)')">P1 (High)</button>
+          <button type="button" class="chip-btn" onclick="setPriority('P2 (Medium)')">P2 (Medium)</button>
+          <button type="button" class="chip-btn" onclick="setPriority('P3 (Normal)')">P3 (Normal)</button>
+        </div>
+
+        <div class="field-label">Action Required</div>
+        <div class="chip-row">
+          <button class="chip-btn" type="button" onclick="setActionRequired('Review')">Review</button>
+          <button class="chip-btn" type="button" onclick="setActionRequired('Approval')">Approval</button>
+          <button class="chip-btn" type="button" onclick="setActionRequired('Information')">Info</button>
+        </div>
+      </section>
+
+      <!-- RIGHT: Live Preview -->
+      <section class="pane">
+        <h3 style="margin-top:0;">Live Preview</h3>
+        <table class="table">
+          <tbody id="categoryPreviewBody"></tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- OVERLAYS -->
+<div class="overlay" id="dialogCommon">
+  <div class="dialog">
+    <h3 id="dialogTitle">Confirm Action</h3>
+    <p id="dialogMsg" class="text-muted">Are you sure?</p>
+    <div style="display:flex;justify-content:center;gap:12px;margin-top:20px;">
+      <button class="btn-big primary" id="dialogConfirmBtn">Confirm</button>
+      <button class="btn-big cancel" onclick="closeOverlay()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="filtersOverlay">
+  <div class="dialog">
+    <h3>Advanced Filters</h3>
+    <div style="text-align:left;margin-top:16px;">
+      <div class="field-label">Filter by Category</div>
+      <select id="filterCategorySelect" class="select-input">
+        <option value="">(All Categories)</option>
+      </select>
+    </div>
+    <div style="display:flex;justify-content:center;gap:10px;margin-top:20px;">
+      <button class="btn-big primary" onclick="applyFiltersFromOverlay()">Apply</button>
+      <button class="btn-big cancel" onclick="resetFiltersFromOverlay()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Action Successful</div>
+
+<script>
+/* ===============================
+   POWER AUTOMATE CONFIG (LIVE)
+   =============================== */
+const ENV = {
+  MODE: "api",          // switch to "mock" if you want to test without flows
+  TIMEOUT_MS: 15000,
+  RETRIES: 1
+};
+
+const API_ROUTES = {
+  // Fetch activities flow (two endpoints: primary + failover)
+  loadActivitiesEndpoints: [
+    "https://workflowsmanagementservice.weu-il103.gateway.prod.island.powerapps.com/powerautomate/tenants/00000000-0000-0000-0000-000000000000/environments/Default-ca6a4b3f-9123-49bc-bcb9-27085ebbf1a1/automations/direct/workflows/c7dd6a359ac9415cadb9cefa30f026e5/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2_BepspLQ2Td_O1WK6wjke7wwzYVwRhBU-cKOP4DS1E",
+    "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/29fe86efd13f469ca965fc36e55eeb90/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=yhwPp6oF6kj_HfoZ-lA8deS29biWOCqovqYFqU7lbyM"
+
+  ],
+  // Single actions flow (assign, archive, save comments)
+  actionsEndpoint:
+    "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/af33600fafc8435db96a304545b0825c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mAb3Uf8-GFHPzAJdzWudx7zxyQhVlbidN_MPyNeVNM4"
+};
+
+/* ============ Minimal HTTP helper (POST only, for Power Automate) ============ */
+const http = (() => {
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  const withTimeout = (p, ms) => Promise.race([
+    p,
+    new Promise((_, rej) => setTimeout(() => rej(new Error("Request timed out")), ms))
+  ]);
+
+  async function post(url, body, attempt = 0) {
+    try {
+      const res = await withTimeout(fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(body || {})
+      }), ENV.TIMEOUT_MS);
+
+      const ct = res.headers.get("content-type") || "";
+      const data = ct.includes("application/json") ? await res.json() : await res.text();
+
+      if (!res.ok) {
+        throw new Error(
+          typeof data === "string"
+            ? data
+            : (data && data.message) || `HTTP ${res.status}`
+        );
+      }
+      return data;
+    } catch (e) {
+      if (attempt < (ENV.RETRIES || 0)) {
+        await sleep(600 * (attempt + 1));
+        return post(url, body, attempt + 1);
+      }
+      throw e;
+    }
+  }
+
+  return { post };
+})();
+
+/* ============ DOM helpers & toast/dialog ============ */
+const $  = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+function setText(el, t) { if (el) el.textContent = t ?? ""; }
+function setHTMLTrusted(el, html) { if (el) el.innerHTML = html || ""; }
+
+function showToast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 3000);
+}
+function showDialog(title, msg, onConfirm) {
+  setText($("#dialogTitle"), title);
+  setText($("#dialogMsg"), msg);
+  $("#dialogCommon").classList.add("visible");
+  const btn = $("#dialogConfirmBtn");
+  const clone = btn.cloneNode(true);
+  btn.parentNode.replaceChild(clone, btn);
+  clone.onclick = onConfirm;
+}
+function closeOverlay() {
+  $$(".overlay").forEach(o => o.classList.remove("visible"));
+}
+
+/* ============ Mock data (for MODE: "mock") ============ */
+const MOCK_DEPARTMENTS = [
+  { DSU_KEY: "HR",      DSU_HeadTitle: "Head HR",        DSU_Head_Personal_Email: "hr.head@agency.gov.ng" },
+  { DSU_KEY: "FINANCE", DSU_HeadTitle: "Head Finance",   DSU_Head_Personal_Email: "finance@agency.gov.ng" },
+  { DSU_KEY: "LEGAL",   DSU_HeadTitle: "Legal Adviser",  DSU_Head_Personal_Email: "legal@agency.gov.ng" },
+  { DSU_KEY: "ICT",     DSU_HeadTitle: "Head ICT",       DSU_Head_Personal_Email: "ict@agency.gov.ng" },
+  { DSU_KEY: "OPS",     DSU_HeadTitle: "Dir Operations", DSU_Head_Personal_Email: "ops@agency.gov.ng" }
+];
+
+const MOCK_CATEGORIES = [
+  { Category: "Administrative", Subcategory: "Leave Request",   "Category Code": "ADM", "SubCategory Code": "LR",   "Default Primary Responsible": "HR",      "Default Supporting Department/Unit": "",        Timeline: "3 Days", Priority: "Low"    },
+  { Category: "Administrative", Subcategory: "Procurement",     "Category Code": "ADM", "SubCategory Code": "PROC", "Default Primary Responsible": "OPS",     "Default Supporting Department/Unit": "FINANCE", Timeline: "7 Days", Priority: "High"   },
+  { Category: "Financial",     Subcategory: "Budget Approval", "Category Code": "FIN", "SubCategory Code": "BUD",  "Default Primary Responsible": "FINANCE", "Default Supporting Department/Unit": "OPS",     Timeline: "5 Days", Priority: "High"   },
+  { Category: "Legal",         Subcategory: "Contract Review", "Category Code": "LEG", "SubCategory Code": "REV",  "Default Primary Responsible": "LEGAL",   "Default Supporting Department/Unit": "",        Timeline: "10 Days",Priority: "Medium" }
+];
+
+/* ============ Data providers (mock vs Power Automate) ============ */
+const DataProvider = ENV.MODE === "mock" ? MockProvider() : PowerAutomateProvider();
+
+function MockProvider() {
+  const delay = (ms = 400) => new Promise(r => setTimeout(r, ms));
+  return {
+    async loadActivities() {
+      await delay();
+      return [
+        {
+          ID: 1001,
+          Title: "Sample Mock Activity.pdf",
+          Description: "Mock activity for testing.",
+          Status: "Unknown",
+          AssignmentStatus: "Not Assigned",
+          Category: "Uncategorized",
+          Created: "2025-12-10T14:09:10Z",
+          AssignedTo: "N/A",
+          AttachmentLink: "",
+          Attachments: ""
+        }
+      ];
+    },
+    async action(body) {
+      await delay();
+      return { success: true };
+    },
+    departments() { return MOCK_DEPARTMENTS; },
+    categories()  { return MOCK_CATEGORIES; }
+  };
+}
+
+function PowerAutomateProvider() {
+  return {
+    async loadActivities() {
+      try {
+        return await http.post(API_ROUTES.loadActivitiesEndpoints[0], { action: "loadActivities" });
+      } catch (e) {
+        return await http.post(API_ROUTES.loadActivitiesEndpoints[1], { action: "loadActivities" });
+      }
+    },
+    async action(body) {
+      return await http.post(API_ROUTES.actionsEndpoint, body || {});
+    },
+    departments() { return MOCK_DEPARTMENTS; },
+    categories()  { return MOCK_CATEGORIES; }
+  };
+}
+
+/* ============ Global state ============ */
+const state = {
+  activities: [],
+  DGOselected: null,
+  screen: "activities",
+  filter: "All",
+  filterCategory: "",
+  search: "",
+  categoriesMaster: DataProvider.categories(),
+  departmentsInfo: DataProvider.departments(),
+  assignmentMeta: null,
+  assignmentType: null,
+  commentsDraft: "",
+  selectedActionRequired: "",
+  priority: "Medium",
+  selectedCategory: "",
+  selectedSubcategory: "",
+  selectedAssignedTo: "",
+  selectedCoAssignedTo: "",
+  selectedCcEmails: []
+};
+
+/* ============ Small utility ============ */
+function debounce(fn, ms = 250) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
+
+/* ============ Activities ============ */
+function normalizeActivity(item) {
+  const treated = (item.Status === "Processed") || (item.AssignmentStatus === "Assigned");
+  const status  = treated ? "Treated" : (item.Status || "Unknown");
+
+  const actions = [];
+  if (!treated) actions.push("Assign"); else actions.push("ReAssign");
+  actions.push("View Details", "Archive");
+
+  return {
+    id: item.ID,
+    title: item.Title,
+    comments: item.Description || "",
+    status,
+    assignmentStatus: item.AssignmentStatus || "",
+    priority: item.Priority || "Medium",
+    category: item.Category || "Uncategorized",
+    date: new Date(item.Created).toLocaleDateString('en-GB'),
+    assignedTo: item.AssignedTo || "N/A",
+    attachmentLink: item.AttachmentLink || "",
+    attachments: item.Attachments || "",
+    actions
+  };
+}
+
+async function loadActivities() {
+  try {
+    const data = await DataProvider.loadActivities();
+    const list = Array.isArray(data) ? data : (Array.isArray(data?.body) ? data.body : []);
+    state.activities = list.map(normalizeActivity);
+    renderActivities();
+  } catch (e) {
+    console.error(e);
+    showToast("Failed to load activities");
+  }
+}
+
+function renderActivities() {
+  const list = $("#activitiesList");
+  list.innerHTML = "";
+
+  const filtered = state.activities.filter(a => {
+    const matchesFilter =
+      state.filter === "All"      ? true :
+      state.filter === "Treated"  ? (a.status === "Treated") :
+                                    (a.status !== "Treated");
+
+    const s = (state.search || "").toLowerCase();
+    const matchesSearch = !s
+      ? true
+      : (a.title + a.category + a.id).toLowerCase().includes(s);
+
+    const matchesCat = !state.filterCategory ? true : a.category === state.filterCategory;
+
+    return matchesFilter && matchesSearch && matchesCat;
+  });
+
+  if (filtered.length === 0) {
+    const div = document.createElement("div");
+    div.style.cssText = "text-align:center;padding:40px;color:#999;";
+    div.textContent   = "No activities found.";
+    list.appendChild(div);
+    return;
+  }
+
+  filtered.forEach(a => {
+    const card = document.createElement("div");
+    card.className = "activity-card";
+    card.onclick = (e) => {
+      if (e.target.tagName === "BUTTON") return;
+      openDetails(a.id);
+    };
+
+    const statusClass = a.status === "Treated" ? "treated" : "unknown";
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="activity-title">${a.title}</div>
+        <span class="activity-status-tag ${statusClass}">${a.status}</span>
+      </div>
+      <div class="activity-meta-card">
+        <span>ID: ${a.id}</span>
+        <span>${a.category}</span>
+        <span>${a.date}</span>
+      </div>
+      <div class="card-actions"></div>
+    `;
+
+    const actionsDiv = card.querySelector(".card-actions");
+    a.actions.forEach(act => {
+      const btn = document.createElement("button");
+      btn.className =
+        act === "Archive"      ? "btn-pill btn-orange"  :
+        act === "View Details" ? "btn-pill btn-outline" :
+                                 "btn-pill btn-green";
+      btn.textContent = act;
+      btn.onclick     = () => handleAction(act, a.id);
+      actionsDiv.appendChild(btn);
+    });
+
+    list.appendChild(card);
+  });
+}
+
+function setFilter(f) {
+  state.filter = f;
+  $$(".seg-btn").forEach(b => b.classList.remove("active"));
+  const map = {
+    "All":        "#seg-all",
+    "Treated":    "#seg-treated",
+    "NotTreated": "#seg-nottreated"
+  };
+  if (map[f]) document.querySelector(map[f]).classList.add("active");
+  renderActivities();
+}
+
+const onSearchChange = debounce((val) => {
+  state.search = val;
+  renderActivities();
+}, 200);
+
+/* ============ Details pane ============ */
+function toggleDetails(show) {
+  const pane = $("#detailsPane");
+  if (window.innerWidth <= 1000) {
+    pane.classList.toggle("mobile-visible", show);
+  }
+}
+
+function openDetails(id) {
+  const act = state.activities.find(x => x.id === id);
+  if (!act) return;
+  state.DGOselected = act;
+  toggleDetails(true);
+
+  setText($("#detailsTitle"), "Activity #" + act.id);
+
+  const body = $("#detailsBody");
+  body.innerHTML = "";
+
+  const rows = [
+    ["Title",       act.title],
+    ["Status",      act.status + (act.assignmentStatus ? ` (${act.assignmentStatus})` : "")],
+    ["Assigned To", act.assignedTo || "Unassigned"],
+    ["Description", act.comments]
+  ];
+
+  rows.forEach(([label, val]) => {
+    const row = document.createElement("div");
+    row.className = "details-row";
+
+    const l = document.createElement("div");
+    l.className = "details-label";
+    l.textContent = label;
+
+    const v = document.createElement("div");
+    v.className = "details-val";
+    v.textContent = val || "";
+
+    row.appendChild(l);
+    row.appendChild(v);
+    body.appendChild(row);
+  });
+
+  if (act.attachmentLink) {
+    const row = document.createElement("div");
+    row.className = "details-row";
+    const l = document.createElement("div");
+    l.className = "details-label";
+    l.textContent = "Attachment";
+    const v = document.createElement("div");
+    v.className = "details-val";
+    const a = document.createElement("a");
+    a.href = act.attachmentLink;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = "Open document";
+    v.appendChild(a);
+    row.appendChild(l);
+    row.appendChild(v);
+    body.appendChild(row);
+  }
+
+  const cta = document.createElement("div");
+  cta.style.cssText = "margin-top:20px;text-align:center;";
+  const btn = document.createElement("button");
+  btn.className = "btn-pill btn-green";
+  btn.textContent = "Process Activity";
+  btn.onclick = () => handleAction("Assign", act.id);
+  cta.appendChild(btn);
+  body.appendChild(cta);
+}
+
+/* ============ Navigation ============ */
+function navigate(screenName, extra = {}) {
+  state.screen = screenName;
+  if (extra.assignmentType) state.assignmentType = extra.assignmentType;
+
+  $$(".screen").forEach(s => s.classList.remove("active"));
+  $("#screen-" + screenName).classList.add("active");
+
+  const titles = {
+    activities: "Activities List",
+    assignment: "Preview Assignment",
+    category:   "Categorization & Routing",
+    comments:   "Comments Editor"
+  };
+  setText($("#currentScreenTag"), titles[screenName] || screenName);
+
+  if (screenName === "category") {
+    initCategoryDropdowns();
+    buildCategoryPreview();
+  }
+  if (screenName === "assignment") {
+    buildAssignmentTables();
+    loadPreviewEmail();
+  }
+  if (screenName === "comments") {
+    $("#commentsBox").value = state.commentsDraft;
+  }
+}
+
+function handleAction(action, id) {
+  const act = state.activities.find(x => x.id === id);
+  state.DGOselected = act;
+
+  if (action === "Assign" || action === "ReAssign") {
+    resetAssignmentForm();
+    navigate("category", { assignmentType: action === "Assign" ? "New" : "Re" });
+  } else if (action === "Archive") {
+    showDialog("Archive Activity", "Are you sure you want to archive this activity?", async () => {
+      try {
+        await DataProvider.action({ action: "archive", id });
+        showToast("Activity Archived");
+        closeOverlay();
+        const idx = state.activities.findIndex(a => a.id === id);
+        if (idx !== -1) state.activities.splice(idx, 1);
+        renderActivities();
+      } catch {
+        showToast("Failed to archive");
+      }
+    });
+  } else if (action === "View Details") {
+    openDetails(id);
+  }
+}
+
+/* ============ Category / routing ============ */
+function resetAssignmentForm() {
+  state.selectedCategory       = "";
+  state.selectedSubcategory    = "";
+  state.selectedAssignedTo     = "";
+  state.selectedCoAssignedTo   = "";
+  state.commentsDraft          = "";
+  state.selectedActionRequired = "";
+  state.selectedCcEmails       = [];
+  state.assignmentMeta         = null;
+}
+
+function initCategoryDropdowns() {
+  const catSel = $("#categorySelect");
+  const uniqueCats = [...new Set(state.categoriesMaster.map(x => x.Category))];
+  catSel.innerHTML = `<option value="">Select Category</option>`;
+  uniqueCats.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    catSel.appendChild(opt);
+  });
+
+  if (state.selectedCategory) {
+    catSel.value = state.selectedCategory;
+    onCategoryChange(state.selectedCategory, true);
+  }
+  buildUserSelects();
+}
+
+function onCategoryChange(val, skipMetaReset = false) {
+  state.selectedCategory = val;
+  const subSel = $("#subcategorySelect");
+  subSel.innerHTML = `<option value="">Select Subcategory</option>`;
+
+  if (!val) return;
+
+  const subs = state.categoriesMaster.filter(x => x.Category === val).map(x => x.Subcategory);
+  [...new Set(subs)].forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = s;
+    subSel.appendChild(opt);
+  });
+
+  if (state.selectedSubcategory) subSel.value = state.selectedSubcategory;
+  if (!skipMetaReset) updateAssignmentLogic();
+}
+
+function onSubcategoryChange(val) {
+  state.selectedSubcategory = val;
+  updateAssignmentLogic();
+}
+
+function updateAssignmentLogic() {
+  if (!state.selectedCategory || !state.selectedSubcategory) return;
+
+  const rule = state.categoriesMaster.find(
+    x => x.Category === state.selectedCategory && x.Subcategory === state.selectedSubcategory
+  );
+
+  if (rule) {
+    const primaryDSU   = rule["Default Primary Responsible"];
+    const secondaryDSU = rule["Default Supporting Department/Unit"];
+
+    const primaryUser   = state.departmentsInfo.find(d => d.DSU_KEY === primaryDSU);
+    const secondaryUser = state.departmentsInfo.find(d => d.DSU_KEY === secondaryDSU);
+
+    state.assignmentMeta = rule;
+    state.priority       = rule.Priority || "Medium";
+
+    if (!state.selectedAssignedTo && primaryUser)
+      state.selectedAssignedTo = primaryUser.DSU_Head_Personal_Email;
+    if (!state.selectedCoAssignedTo && secondaryUser)
+      state.selectedCoAssignedTo = secondaryUser.DSU_Head_Personal_Email;
+  }
+
+  updateLabels();
+  buildCategoryPreview();
+}
+
+function updateLabels() {
+  setText($("#assignedToLabel"),   state.selectedAssignedTo   || "Pending Selection");
+  setText($("#coAssignedToLabel"), state.selectedCoAssignedTo || "None");
+  $("#assignedToSelect").value = state.selectedAssignedTo || "";
+
+  $$(".chip-row .chip-btn").forEach(b => {
+    const isPriority = ["P1 (High)", "P2 (Medium)", "P3 (Normal)"].includes(b.textContent);
+    if (isPriority) {
+      b.classList.toggle("active", b.textContent === state.priority);
+    }
+  });
+}
+
+function buildUserSelects() {
+  const opts = `<option value="">(Select User)</option>` +
+    state.departmentsInfo
+      .map(d => `<option value="${d.DSU_Head_Personal_Email}">${d.DSU_HeadTitle}</option>`)
+      .join("");
+
+  $("#assignedToSelect").innerHTML   = opts;
+  $("#coAssignedToSelect").innerHTML = opts;
+  $("#assignedToSelect").value       = state.selectedAssignedTo || "";
+}
+
+function onAssignedToOverride(val) {
+  state.selectedAssignedTo = val;
+  updateLabels();
+  buildCategoryPreview();
+}
+function onCoAssignedToOverride(val) {
+  state.selectedCoAssignedTo = val;
+  updateLabels();
+  buildCategoryPreview();
+}
+function setPriority(p) {
+  state.priority = p;
+  updateLabels();
+  buildCategoryPreview();
+}
+
+function setActionRequired(a) {
+  state.selectedActionRequired = a;
+  buildCategoryPreview();
+  $$(".chip-row .chip-btn").forEach(b => {
+    const isAction = ["Review", "Approval", "Info"].includes(b.textContent);
+    if (isAction) b.classList.toggle("active", b.textContent === a);
+  });
+}
+
+function buildCategoryPreview() {
+  const tbody = $("#categoryPreviewBody");
+  tbody.innerHTML = `
+    <tr><td>Category</td><td>${state.selectedCategory || "-"}</td></tr>
+    <tr><td>Assigned To</td><td>${state.selectedAssignedTo || "-"}</td></tr>
+    <tr><td>Priority</td><td>${state.priority}</td></tr>
+    <tr><td>Action</td><td>${state.selectedActionRequired || "-"}</td></tr>
+    <tr><td>CC</td><td>${state.selectedCcEmails.length} recipients</td></tr>
+  `;
+}
+
+/* ============ CC selection ============ */
+function searchCCOptions(query) {
+  const list = $("#ccOptionsList");
+  if (!query) { list.innerHTML = ""; return; }
+
+  const matches = state.departmentsInfo.filter(d =>
+    d.DSU_HeadTitle.toLowerCase().includes(query.toLowerCase())
+  );
+
+  list.innerHTML = matches.map(d =>
+    `<div class="cc-option-item" onclick="addCc('${d.DSU_Head_Personal_Email}')">
+       ${d.DSU_HeadTitle} (${d.DSU_KEY})
+     </div>`
+  ).join("");
+}
+
+function addCc(email) {
+  if (!state.selectedCcEmails.includes(email)) {
+    state.selectedCcEmails.push(email);
+    renderCcChips();
+  }
+  $("#ccSearchBox").value = "";
+  $("#ccOptionsList").innerHTML = "";
+  buildCategoryPreview();
+}
+
+function renderCcChips() {
+  $("#ccSelectedChips").innerHTML = state.selectedCcEmails.map(e =>
+    `<span class="cc-chip">
+       ${e.split("@")[0]}
+       <button onclick="removeCc('${e}')">×</button>
+     </span>`
+  ).join("");
+}
+
+function removeCc(e) {
+  state.selectedCcEmails = state.selectedCcEmails.filter(x => x !== e);
+  renderCcChips();
+  buildCategoryPreview();
+}
+
+/* ============ Preview & Submit ============ */
+function buildAssignmentTables() {
+  const tbody = $("#assignmentTableBody");
+  tbody.innerHTML = `
+    <tr><td>Activity</td><td>${state.DGOselected ? state.DGOselected.title : ""}</td></tr>
+    <tr><td>Assigned To</td><td>${state.selectedAssignedTo || ""}</td></tr>
+    <tr><td>Co-Assign</td><td>${state.selectedCoAssignedTo || "None"}</td></tr>
+    <tr><td>Action</td><td><span style="font-weight:bold;color:var(--brand-primary)">${state.selectedActionRequired || ""}</span></td></tr>
+    <tr><td>Priority</td><td>${state.priority}</td></tr>
+    <tr><td>Comments</td><td>${state.commentsDraft || "None"}</td></tr>
+  `;
+}
+
+/* LOCAL ONLY email preview – no Power Automate call */
+function loadPreviewEmail() {
+  const assignTo = state.selectedAssignedTo || "Colleague";
+  const title    = state.DGOselected?.title || "(No title)";
+  const action   = state.selectedActionRequired || "Review";
+  const comments = state.commentsDraft || "None";
+
+  const html = `
+    <p>Dear <strong>${assignTo}</strong>,</p>
+    <p>You have been assigned the activity: <strong>${title}</strong>.</p>
+    <p><strong>Action:</strong> ${action}</p>
+    <p><strong>Comments:</strong> ${comments}</p>
+    <p><em>System Generated Email (Preview only – not yet sent)</em></p>
+  `;
+
+  setHTMLTrusted($("#previewEmailBody"), html);
+}
+
+function previewAssignment() {
+  buildAssignmentTables();
+  loadPreviewEmail();
+  showToast("Preview Updated");
+}
+
+async function submitAssignment() {
+  if (!state.selectedAssignedTo) {
+    alert("Please select an Assigned User");
+    return;
+  }
+
+  showDialog("Submit Assignment", "Send email and assign task?", async () => {
+    closeOverlay();
+
+    const payload = {
+      action:          "updateAssignment",
+      id:              state.DGOselected.id,
+      assignedTo:      state.selectedAssignedTo,
+      coAssignedTo:    state.selectedCoAssignedTo || null,
+      priority:        state.priority,
+      category:        state.selectedCategory || null,
+      subcategory:     state.selectedSubcategory || null,
+      requiredAction:  state.selectedActionRequired || null,
+      cc:              state.selectedCcEmails,
+      comments:        state.commentsDraft || ""
+    };
+
+    const idx  = state.activities.findIndex(a => a.id === state.DGOselected.id);
+    const prev = idx >= 0 ? { ...state.activities[idx] } : null;
+    if (idx !== -1) {
+      state.activities[idx].status     = "Treated";
+      state.activities[idx].assignedTo = state.selectedAssignedTo;
+      renderActivities();
+    }
+
+    try {
+      await DataProvider.action(payload);
+      showToast("Assignment Submitted Successfully");
+      navigate("activities");
+    } catch (e) {
+      if (idx !== -1 && prev) state.activities[idx] = prev;
+      renderActivities();
+      showToast("Submit failed. Restored previous state.");
+    }
+  });
+}
+
+/* ============ Comments ============ */
+async function saveComments() {
+  state.commentsDraft = $("#commentsBox").value;
+  try {
+    await DataProvider.action({
+      action:     "saveComments",
+      activityId: state.DGOselected?.id,
+      text:       state.commentsDraft
+    });
+    showToast("Comments Saved");
+    navigate("category");
+  } catch {
+    showToast("Failed to save comments");
+  }
+}
+
+/* ============ Filters overlay ============ */
+function openFiltersOverlay() {
+  const sel = $("#filterCategorySelect");
+  sel.innerHTML = `<option value="">(All Categories)</option>`;
+  [...new Set(state.categoriesMaster.map(c => c.Category))].forEach(cat => {
+    const opt = document.createElement("option");
+    opt.value = cat;
+    opt.textContent = cat;
+    sel.appendChild(opt);
+  });
+  sel.value = state.filterCategory || "";
+  $("#filtersOverlay").classList.add("visible");
+}
+function applyFiltersFromOverlay() {
+  state.filterCategory = $("#filterCategorySelect").value || "";
+  closeOverlay();
+  renderActivities();
+}
+function resetFiltersFromOverlay() {
+  state.filterCategory = "";
+  $("#filterCategorySelect").value = "";
+  closeOverlay();
+  renderActivities();
+}
+
+/* ============ Wire globals so HTML inline handlers still work ============ */
+window.setFilter             = setFilter;
+window.onSearchChange        = (v) => onSearchChange(v);
+window.openFiltersOverlay    = openFiltersOverlay;
+window.applyFiltersFromOverlay = applyFiltersFromOverlay;
+window.resetFiltersFromOverlay = resetFiltersFromOverlay;
+window.openDetails           = openDetails;
+window.toggleDetails         = toggleDetails;
+window.handleAction          = handleAction;
+window.navigate              = navigate;
+window.previewAssignment     = previewAssignment;
+window.submitAssignment      = submitAssignment;
+window.initCategoryDropdowns = initCategoryDropdowns;
+window.onCategoryChange      = onCategoryChange;
+window.onSubcategoryChange   = onSubcategoryChange;
+window.onAssignedToOverride  = onAssignedToOverride;
+window.onCoAssignedToOverride= onCoAssignedToOverride;
+window.setPriority           = setPriority;
+window.setActionRequired     = setActionRequired;
+window.searchCCOptions       = searchCCOptions;
+window.addCc                 = addCc;
+window.removeCc              = removeCc;
+window.saveComments          = saveComments;
+window.clearAssignmentEntries= () => {
+  resetAssignmentForm();
+  initCategoryDropdowns();
+  updateLabels();
+  buildCategoryPreview();
+};
+
+/* ============ Init ============ */
+$("#dateDisplay").textContent = new Date().toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric'
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeOverlay();
+});
+setText($("#currentScreenTag"), "Activities");
+loadActivities();
+</script>
+</body>
+</html>

@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DGCEO Digital OPS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --brand-primary: #008751;
+      --brand-primary-soft: #e1f6eb;
+      --brand-secondary: #00a69d;
+      --danger: #9f1d1d;
+      --accent-orange: #e96300;
+      --bg-main: #f4f7f5;
+      --bg-card-soft: #edf8f2;
+      --border-soft: #c7e2d5;
+      --text-main: #024029;
+      --text-muted: #7a7a7a;
+      --radius-lg: 12px;
+      --radius-md: 8px;
+      --shadow-soft: 0 2px 8px rgba(0,0,0,0.06);
+      --font: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--bg-main);
+      color: var(--text-main);
+    }
+    .shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: radial-gradient(circle at top left,#f3faf6,#f4f7f5 55%,#e9f3ed);
+    }
+    .shell-header {
+      background: var(--brand-primary);
+      color:#fff;
+      padding:10px 14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .shell-header-left{display:flex;align-items:center;gap:10px;}
+    .logo-pill{
+      width:32px;height:32px;border-radius:999px;
+      background:#fff;color:var(--brand-primary);
+      display:flex;align-items:center;justify-content:center;
+      font-weight:800;font-size:16px;
+    }
+    .shell-header-right{display:flex;gap:8px;flex-wrap:wrap;}
+    .tag{
+      padding:4px 10px;border-radius:999px;
+      border:1px solid rgba(255,255,255,0.5);
+      font-size:11px;
+    }
+    .screen{
+      display:none;
+      padding:10px;
+      max-width:1200px;
+      margin:0 auto;
+      width:100%;
+    }
+    .screen.active{display:block;}
+
+    /* ACTIVITIES */
+    .activities-header-row{
+      display:grid;
+      grid-template-columns:1fr 2fr 1fr;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    @media(max-width:800px){
+      .activities-header-row{grid-template-columns:1fr;}
+    }
+    .nav-chip{
+      display:flex;align-items:center;gap:8px;
+      background:#fff;border-radius:18px;
+      border:2px solid var(--brand-primary);
+      padding:8px 10px;font-size:13px;font-weight:600;
+      cursor:pointer;
+    }
+    .nav-chip .emoji{font-size:18px;}
+    .activities-seg{
+      display:grid;grid-template-columns:repeat(4,1fr);
+      background:#fff;border-radius:18px;
+      border:2px solid var(--brand-primary);
+      overflow:hidden;
+    }
+    .seg-btn{
+      border:none;background:#fff;font-size:13px;
+      font-weight:600;cursor:pointer;padding:8px;
+      border-right:1px solid #c7e2d5;
+    }
+    .seg-btn:last-child{border-right:none;}
+    .seg-btn.active{background:var(--brand-primary);color:#fff;}
+    .search-input{
+      width:100%;padding:9px 12px;
+      border-radius:18px;border:1px solid var(--border-soft);
+      box-shadow:var(--shadow-soft);background:#fff;
+      font-size:13px;outline:none;
+    }
+    .activities-body{
+      display:grid;
+      grid-template-columns:2fr 1.3fr;
+      gap:10px;
+    }
+    @media(max-width:1000px){
+      .activities-body{grid-template-columns:1fr;}
+    }
+    .list-scroll{
+      max-height:calc(100vh - 200px);
+      overflow-y:auto;
+    }
+    .activity-card{
+      background:var(--bg-card-soft);
+      border:1px solid var(--border-soft);
+      border-radius:var(--radius-lg);
+      padding:10px;
+      display:grid;
+      grid-template-columns:1fr 120px;
+      gap:8px;
+      box-shadow:var(--shadow-soft);
+      margin-bottom:10px;
+    }
+    @media(max-width:600px){
+      .activity-card{grid-template-columns:1fr;}
+    }
+    .activity-title{font-size:13px;font-weight:700;}
+    .activity-meta-card{
+      background:#f7f9fa;
+      border-radius:10px;
+      border:1px solid #e0e4e8;
+      padding:6px 8px;
+      font-size:12px;
+      display:flex;
+      justify-content:space-between;
+    }
+    .activity-status-tag{
+      font-size:11px;
+      padding:2px 6px;
+      border-radius:999px;
+      background:#f0f2f5;
+    }
+    .activity-status-tag.treated{
+      background:#e3f7eb;color:#0a6e36;
+    }
+    .btn-pill{
+      width:100%;
+      border-radius:6px;
+      padding:7px 4px;
+      font-size:11px;
+      font-weight:600;
+      border:none;
+      cursor:pointer;
+      margin-bottom:3px;
+    }
+    .btn-pill.btn-green{background:var(--brand-primary);color:#fff;}
+    .btn-pill.btn-dark{background:#111827;color:#fff;}
+    .btn-pill.btn-orange{background:var(--accent-orange);color:#fff;}
+    .btn-pill.btn-outline{
+      background:#fff;color:var(--brand-primary);
+      border:2px solid var(--brand-primary);
+    }
+    .details-pane{
+      background:#e6f7f9;
+      border-radius:var(--radius-lg);
+      border:1px solid var(--brand-secondary);
+      padding:10px;
+      max-height:calc(100vh - 200px);
+      overflow-y:auto;
+    }
+    @media(max-width:1000px){
+      .details-pane{
+        position:fixed;
+        inset:60px 10px 10px;
+        display:none;
+        z-index:999;
+      }
+      .details-pane.mobile-visible{display:block;}
+    }
+
+    /* TOOLBAR & LAYOUT */
+    .screen-toolbar{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(0,1fr));
+      gap:8px;
+      margin-bottom:8px;
+    }
+    .toolbar-btn{
+      padding:9px 10px;
+      border-radius:18px;
+      border:none;
+      font-weight:600;
+      font-size:13px;
+      display:flex;align-items:center;justify-content:center;gap:6px;
+      cursor:pointer;
+      background:var(--brand-primary);
+      color:#fff;
+    }
+    .toolbar-btn.secondary{
+      background:#fff;color:var(--brand-primary);
+      border:1px solid #c7e2d5;
+    }
+    .toolbar-btn.destructive{background:var(--danger);}
+
+    .assignment-layout{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      height:calc(100vh - 200px);
+    }
+    @media(max-width:900px){
+      .assignment-layout{grid-template-columns:1fr;height:auto;}
+    }
+    .pane{
+      background:#fff;
+      border-radius:10px;
+      border:1px solid var(--border-soft);
+      padding:10px;
+      box-shadow:var(--shadow-soft);
+      overflow:auto;
+    }
+    .table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:12px;
+    }
+    .table th{
+      background:var(--brand-primary);
+      color:#fff;
+      padding:6px;
+      text-align:left;
+    }
+    .table td{
+      padding:6px;
+      border-bottom:1px solid #eee;
+    }
+
+    .label-block{
+      background:#cfeedf;
+      border-radius:6px;
+      padding:6px 8px;
+      font-size:12px;
+      margin-bottom:6px;
+    }
+    .field-label{
+      font-size:12px;
+      font-weight:600;
+      margin-top:4px;
+      margin-bottom:2px;
+    }
+    .select-input{
+      width:100%;
+      padding:6px 8px;
+      border-radius:6px;
+      border:1px solid var(--border-soft);
+      background:#f9fbfa;
+      font-size:12px;
+      margin-bottom:6px;
+    }
+
+    /* COMMENTS */
+    .comments-editor{
+      background:#fff;
+      border-radius:10px;
+      border:1px solid var(--border-soft);
+      display:flex;flex-direction:column;
+      height:calc(100vh - 200px);
+      box-shadow:var(--shadow-soft);
+    }
+    .editor-area{
+      flex:1;
+      border:none;
+      padding:10px;
+      outline:none;
+      font-size:13px;
+      resize:none;
+    }
+
+    /* CC chips */
+    .cc-options-list{
+      max-height:150px;
+      overflow-y:auto;
+      border:1px solid #e0e4e8;
+      border-radius:6px;
+      padding:4px;
+      background:#fafafa;
+      font-size:12px;
+    }
+    .cc-option-item{
+      padding:4px 6px;
+      border-radius:4px;
+      cursor:pointer;
+      margin-bottom:2px;
+    }
+    .cc-option-item:hover{background:#e1f6eb;}
+    .cc-selected-chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:5px;
+      margin-top:6px;
+      font-size:11px;
+    }
+    .cc-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      padding:3px 7px;
+      border-radius:999px;
+      background:#e1f6eb;
+      border:1px solid #c7e2d5;
+    }
+    .cc-chip button{
+      border:none;background:transparent;cursor:pointer;font-size:11px;
+    }
+    .chip-row{
+      display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;
+    }
+    .chip-btn{
+      border-radius:999px;
+      border:1px solid var(--brand-primary);
+      background:#fff;
+      padding:4px 10px;
+      font-size:11px;
+      cursor:pointer;
+    }
+    .chip-btn.active{background:var(--brand-primary);color:#fff;}
+
+    /* OVERLAYS */
+    .overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.4);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:2000;
+    }
+    .overlay.visible{display:flex;}
+    .dialog{
+      background:#fff;
+      padding:20px;
+      border-radius:12px;
+      width:min(500px,95%);
+      box-shadow:0 5px 20px rgba(0,0,0,0.25);
+      text-align:left;
+    }
+    .btn-big{
+      padding:10px 18px;
+      border-radius:20px;
+      border:none;
+      font-weight:600;
+      cursor:pointer;
+      font-size:13px;
+      color:#fff;
+    }
+    .btn-big.primary{background:var(--brand-primary);}
+    .btn-big.cancel{background:var(--danger);}
+    .text-muted{font-size:11px;color:var(--text-muted);}
+
+    /* ATTACHMENTS PANEL */
+    .attachments-pane{
+      position:fixed;
+      top:60px;bottom:10px;right:-620px;
+      width:min(600px,calc(100% - 20px));
+      background:#fff;
+      border-radius:12px 0 0 12px;
+      box-shadow:0 5px 20px rgba(0,0,0,0.25);
+      border:1px solid #c7e2d5;
+      z-index:1500;
+      display:flex;
+      flex-direction:column;
+      transition:right .25s ease-out;
+    }
+    .attachments-pane.visible{right:10px;}
+    .attachments-header{
+      padding:8px 12px;
+      border-bottom:1px solid #e0e4e8;
+      background:#f4f7f5;
+      display:flex;justify-content:space-between;align-items:center;
+    }
+    .attachments-body{
+      flex:1;
+      display:grid;
+      grid-template-columns:190px 1fr;
+      min-height:0;
+    }
+    @media(max-width:700px){
+      .attachments-body{
+        grid-template-columns:1fr;
+        grid-template-rows:180px 1fr;
+      }
+    }
+    .attachments-list{
+      border-right:1px solid #e0e4e8;
+      padding:6px;
+      overflow-y:auto;
+      font-size:12px;
+      background:#fafafa;
+    }
+    .attachments-item{
+      padding:5px 6px;
+      border-radius:6px;
+      cursor:pointer;
+      margin-bottom:4px;
+      border:1px solid transparent;
+    }
+    .attachments-item:hover{background:#e1f6eb;}
+    .attachments-item.active{
+      background:#d0efe0;
+      border-color:#008751;
+    }
+    .attachments-viewer{padding:6px;overflow:hidden;}
+    .attachments-viewer iframe{
+      width:100%;height:100%;border:none;background:#f4f7f5;
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <!-- HEADER -->
+  <header class="shell-header">
+    <div class="shell-header-left">
+      <div class="logo-pill">N</div>
+      <div>
+        <div style="font-weight:600;font-size:14px;">DGCEO Digital OPS</div>
+        <div style="font-size:11px;opacity:0.85;">Power Apps → HTML + Power Automate HTTP</div>
+      </div>
+    </div>
+    <div class="shell-header-right">
+      <div class="tag">User: <strong>DG Office</strong></div>
+      <div class="tag" id="currentScreenTag">Screen: Activities_1</div>
+    </div>
+  </header>
+
+  <!-- ACTIVITIES SCREEN -->
+  <main class="screen active" id="screen-activities">
+    <div class="activities-header-row">
+      <button class="nav-chip" type="button" onclick="navigate('activities')">
+        <span class="emoji">🏠</span><span>DGCEO Activities Navigation</span>
+      </button>
+
+      <div class="activities-seg">
+        <button id="seg-all" class="seg-btn active" type="button" onclick="setFilter('All')">All</button>
+        <button id="seg-treated" class="seg-btn" type="button" onclick="setFilter('Treated')">Treated</button>
+        <button id="seg-nottreated" class="seg-btn" type="button" onclick="setFilter('NotTreated')">Not Treated</button>
+        <button class="seg-btn" type="button" onclick="openFiltersOverlay()">Show Filters</button>
+      </div>
+
+      <div style="text-align:right;">
+        <div style="background:#e1f6eb;padding:6px 10px;border-radius:8px;font-size:12px;">
+          <strong>Current Screen:</strong> Activities_1 &nbsp;|&nbsp;
+          <strong>User:</strong> DG Office
+        </div>
+      </div>
+    </div>
+
+    <input id="searchBox" class="search-input" placeholder="Search"
+           oninput="onSearchChange(this.value)" />
+
+    <div class="activities-body">
+      <div class="list-scroll" id="activitiesList"></div>
+
+      <aside class="details-pane" id="detailsPane">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h3 id="detailsTitle" style="margin:0;">Details</h3>
+          <button type="button"
+                  style="border:none;background:var(--brand-primary);color:#fff;padding:4px 10px;border-radius:12px;cursor:pointer;font-size:11px;"
+                  onclick="toggleDetails(false)">Close</button>
+        </div>
+        <div id="detailsBody"></div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- ASSIGNMENT SCREEN -->
+  <main class="screen" id="screen-assignment">
+
+    <div class="screen-toolbar">
+      <button class="toolbar-btn secondary" type="button" onclick="navigate('activities')">✖ Cancel</button>
+      <button class="toolbar-btn secondary" type="button" onclick="navigate('category')">✏ Edit Entries</button>
+      <button class="toolbar-btn" type="button" onclick="previewAssignment()">👁 Preview</button>
+      <button class="toolbar-btn" type="button" onclick="submitAssignment()">📤 Submit</button>
+    </div>
+
+    <div class="assignment-layout">
+      <section class="pane">
+        <h3>Status: <span id="assignmentStatusLabel">Awaiting Assignment</span></h3>
+        <table class="table">
+          <thead><tr><th>Field</th><th>Details</th></tr></thead>
+          <tbody id="assignmentTableBody"></tbody>
+        </table>
+      </section>
+
+      <section class="pane">
+        <h3 style="text-align:center;">Activity Notification</h3>
+        <div id="previewEmailBody" style="font-size:13px;line-height:1.4;"></div>
+        <p class="text-muted">HTML body returned by <code>loadPreviewEmail</code> flow.</p>
+      </section>
+    </div>
+  </main>
+
+  <!-- COMMENTS SCREEN -->
+  <main class="screen" id="screen-comments">
+    <div class="screen-toolbar">
+      <button class="toolbar-btn" type="button" onclick="saveComments()">💾 Save Comments</button>
+      <button class="toolbar-btn destructive" type="button" onclick="navigate('category')">✖ Cancel Comments</button>
+      <div></div>
+    </div>
+    <div class="comments-editor">
+      <div style="padding:10px;border-bottom:1px solid #ddd;font-size:13px;font-weight:600;">
+        Comments (rich text)
+      </div>
+      <textarea id="commentsBox" class="editor-area"
+                placeholder="Type comments here..."></textarea>
+    </div>
+  </main>
+
+  <!-- CATEGORY SCREEN -->
+  <main class="screen" id="screen-category">
+    <div class="screen-toolbar">
+      <button class="toolbar-btn secondary" type="button" onclick="navigate('activities')">✖ Cancel</button>
+      <button class="toolbar-btn destructive" type="button" onclick="clearAssignmentEntries()">🗑 Clear Entries</button>
+      <button class="toolbar-btn" type="button" onclick="navigate('comments')">💬 Add/Edit Comments</button>
+    </div>
+
+    <div class="assignment-layout">
+      <!-- LEFT: Controls -->
+      <section class="pane">
+        <h3>Assignment Controls</h3>
+
+        <label class="field-label">Category</label>
+        <select id="categorySelect" class="select-input" onchange="onCategoryChange(this.value)">
+          <option value="">Select Category</option>
+        </select>
+
+        <label class="field-label">Subcategory</label>
+        <select id="subcategorySelect" class="select-input" onchange="onSubcategoryChange(this.value)">
+          <option value="">Select Subcategory</option>
+        </select>
+
+        <div class="label-block">
+          AssignedTo:<br><strong id="assignedToLabel">()</strong>
+        </div>
+        <div class="label-block">
+          Co-AssignedTo:<br><strong id="coAssignedToLabel">()</strong>
+        </div>
+        <div class="label-block">
+          CcTo:<br><strong id="copyToLabel">()</strong>
+        </div>
+
+        <label class="field-label">Override AssignedTo</label>
+        <select id="assignedToSelect" class="select-input" onchange="onAssignedToOverride(this.value)">
+          <option value="">(use default)</option>
+        </select>
+
+        <label class="field-label">Override Co-AssignedTo</label>
+        <select id="coAssignedToSelect" class="select-input" onchange="onCoAssignedToOverride(this.value)">
+          <option value="">(use default)</option>
+        </select>
+
+        <label class="field-label">CC To</label>
+        <input id="ccSearchBox" class="search-input" placeholder="Search DSU Heads..." oninput="searchCCOptions(this.value)" />
+        <div id="ccOptionsList" class="cc-options-list"></div>
+        <div id="ccSelectedChips" class="cc-selected-chips"></div>
+
+        <div class="label-block" id="priorityBox">
+          Priority: (<span id="priorityValueLabel">Medium</span>)
+        </div>
+
+        <label class="field-label">Override Priority</label>
+        <div class="chip-row">
+          <button class="chip-btn" onclick="setPriority('P1 (High)')">P1 (High)</button>
+          <button class="chip-btn" onclick="setPriority('P2 (Medium)')">P2 (Medium)</button>
+          <button class="chip-btn" onclick="setPriority('P3 (Normal)')">P3 (Normal)</button>
+          <button class="chip-btn" onclick="setPriority('P4 (Low)')">P4 (Low)</button>
+        </div>
+
+        <div class="label-block" id="actionRequiredBox">
+          Action Required: (<span id="actionRequiredValueLabel"></span>)
+        </div>
+
+        <label class="field-label">Action Required</label>
+        <div class="chip-row">
+          <button class="chip-btn" onclick="setActionRequired('Review')">Review</button>
+          <button class="chip-btn" onclick="setActionRequired('Approval')">Approval</button>
+          <button class="chip-btn" onclick="setActionRequired('Information')">Information</button>
+        </div>
+      </section>
+
+      <!-- RIGHT: Preview -->
+      <section class="pane">
+        <h3>Preview – Assignment Details</h3>
+        <table class="table">
+          <thead><tr><th>Field</th><th>Details</th></tr></thead>
+          <tbody id="categoryPreviewBody"></tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- OVERLAYS -->
+<div class="overlay" id="dialogNYSC">
+  <div class="dialog">
+    <h3>NYSC – Confirm Action</h3>
+    <p>No details available.</p>
+    <div style="display:flex;justify-content:center;gap:10px;margin-top:10px;">
+      <button class="btn-big primary" onclick="confirmSpecial('NYSC')">Confirm</button>
+      <button class="btn-big cancel" onclick="closeOverlay()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialogSIWES">
+  <div class="dialog">
+    <h3>SIWES – Confirm Action</h3>
+    <p>No details available.</p>
+    <div style="display:flex;justify-content:center;gap:10px;margin-top:10px;">
+      <button class="btn-big primary" onclick="confirmSpecial('SIWES')">Confirm</button>
+      <button class="btn-big cancel" onclick="closeOverlay()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialogArchive">
+  <div class="dialog">
+    <h3>Archive – Confirm Action</h3>
+    <p>No details available.</p>
+    <div style="display:flex;justify-content:center;gap:10px;margin-top:10px;">
+      <button class="btn-big primary" onclick="confirmSpecial('Archive')">Confirm</button>
+      <button class="btn-big cancel" onclick="closeOverlay()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- FILTERS OVERLAY -->
+<div class="overlay" id="filtersOverlay">
+  <div class="dialog">
+    <h3>Advanced Filters</h3>
+    <p class="text-muted">Filters apply on top of the search box.</p>
+
+    <label class="field-label">Category</label>
+    <select id="filterCategorySelect" class="select-input"></select>
+
+    <label class="field-label">Subcategory</label>
+    <select id="filterSubCategorySelect" class="select-input"></select>
+
+    <label class="field-label">Status</label>
+    <select id="filterStatusSelect" class="select-input">
+      <option value="All">All</option>
+      <option value="Treated">Treated</option>
+      <option value="NotTreated">Not Treated</option>
+      <option value="Unknown">Unknown</option>
+    </select>
+
+    <label class="field-label">Assigned To</label>
+    <select id="filterAssignedToSelect" class="select-input"></select>
+
+    <label class="field-label">Date Range</label>
+    <div style="display:flex;gap:6px;">
+      <input id="filterDateFrom" class="select-input" type="date" />
+      <input id="filterDateTo" class="select-input" type="date" />
+    </div>
+
+    <div style="text-align:center;margin-top:12px;">
+      <button class="btn-big primary" onclick="applyFiltersFromOverlay()">Apply</button>
+      <button class="btn-big cancel" onclick="resetFiltersFromOverlay()">Reset</button>
+      <button class="btn-big cancel" onclick="closeFiltersOverlay()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ATTACHMENTS PANEL -->
+<div class="attachments-pane" id="attachmentsPane">
+  <div class="attachments-header">
+    <div id="attachmentsTitle" style="font-size:13px;font-weight:600;">Attachments</div>
+    <button type="button" class="btn-pill btn-orange" onclick="hideAttachmentsPane()">Close</button>
+  </div>
+  <div class="attachments-body">
+    <div class="attachments-list" id="attachmentsList"></div>
+    <div class="attachments-viewer">
+      <iframe id="attachmentFrame" title="Attachment Viewer"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+  /************** FLOW ENDPOINTS (PLACEHOLDERS) **************/
+  const FLOW_ENDPOINTS = {
+
+    loadActivities: "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/5729f50aa0fc4248be30ed4e9d7a7a4f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=z7KX5-d9cZJleItqfA1W-5kGwHnwc5UY6teggFUKI8Q",
+
+
+  updateAssignment:    "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/af33600fafc8435db96a304545b0825c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mAb3Uf8-GFHPzAJdzWudx7zxyQhVlbidN_MPyNeVNM4",
+
+    loadPreviewEmail:"https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/af33600fafc8435db96a304545b0825c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mAb3Uf8-GFHPzAJdzWudx7zxyQhVlbidN_MPyNeVNM4",
+
+ updateSpecial: "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/af33600fafc8435db96a304545b0825c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mAb3Uf8-GFHPzAJdzWudx7zxyQhVlbidN_MPyNeVNM4",
+
+ 
+  saveComments: "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/af33600fafc8435db96a304545b0825c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mAb3Uf8-GFHPzAJdzWudx7zxyQhVlbidN_MPyNeVNM4"
+
+  };
+
+  /************** GLOBAL STATE **************/
+  const state = {
+    activities: [],
+    DGOselected: null,
+    screen: "activities",
+    filter: "All",
+    filterCategory: "",
+    filterSubCategory: "",
+    filterAssignedTo: "",
+    filterDateFrom: "",
+    filterDateTo: "",
+    search: "",
+    categoriesMaster: [],
+    departmentsInfo: [],
+    assignmentMeta: null,
+    assignmentType: null,
+    commentsDraft: "",
+    selectedActionRequired: "",
+    priority: "Medium",
+    selectedCategory: "",
+    selectedSubcategory: "",
+    selectedAssignedTo: "",
+    selectedCoAssignedTo: "",
+    selectedCcEmails: [],
+    assignmentPreviewMode: false,
+    newActivityTask: null,
+    attachmentsSelectedIndex: 0
+  };
+
+  /************** FLOW CALL **************/
+  async function callFlow(name, body = null, methodOverride = null) {
+    const url = FLOW_ENDPOINTS[name];
+    if (!url || url.startsWith("<FLOW_URL")) {
+      console.warn("Flow URL not configured:", name);
+      return null;
+    }
+    const method = methodOverride || (body ? "POST" : "GET");
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: body ? JSON.stringify(body) : null
+    });
+    if (!res.ok) {
+      console.error("Flow error", name, res.status);
+      alert("Flow call failed: " + name);
+      return null;
+    }
+    try { return await res.json(); } catch { return null; }
+  }
+
+  /************** NAVIGATION **************/
+  function navigate(screen, extra = {}) {
+    state.screen = screen;
+    if (extra.assignmentType) state.assignmentType = extra.assignmentType;
+
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById("screen-" + screen).classList.add("active");
+
+    const screenNames = {
+      activities: "Activities_1",
+      assignment: "Activity_Assignments",
+      comments: "Comments",
+      category: "Assignments_Category"
+    };
+    document.getElementById("currentScreenTag").textContent =
+      "Screen: " + (screenNames[screen] || screen);
+
+    if (screen === "assignment") {
+      state.assignmentPreviewMode = false;
+      document.getElementById("assignmentStatusLabel").textContent = "Awaiting Assignment";
+      buildAssignmentTables();
+      loadPreviewEmail();
+    }
+    if (screen === "category") {
+      initCategoryDropdowns();
+      syncUserSelectorsUI();
+      buildCategoryPreview();
+    }
+    if (screen === "comments") {
+      document.getElementById("commentsBox").value = state.commentsDraft;
+    }
+  }
+
+  /************** ACTIVITIES **************/
+  function setFilter(filterName) {
+    state.filter = filterName;
+    ["all","treated","nottreated"].forEach(id => {
+      const btn = document.getElementById("seg-" + id);
+      if (btn) btn.classList.remove("active");
+    });
+    if (filterName === "All") document.getElementById("seg-all").classList.add("active");
+    if (filterName === "Treated") document.getElementById("seg-treated").classList.add("active");
+    if (filterName === "NotTreated") document.getElementById("seg-nottreated").classList.add("active");
+    renderActivities();
+  }
+  function onSearchChange(val){state.search=(val||"").toLowerCase();renderActivities();}
+  function activityMatchesFilters(a){
+    if(state.search){
+      const txt=(a.title+" "+(a.category||"")+" "+(a.subcategory||"")).toLowerCase();
+      if(!txt.includes(state.search)) return false;
+    }
+    if(state.filter==="Treated" && a.status!=="Treated") return false;
+    if(state.filter==="NotTreated" && a.status==="Treated") return false;
+    if(state.filter==="Unknown" && a.status!=="Unknown") return false;
+    if(state.filterCategory && a.category!==state.filterCategory) return false;
+    if(state.filterSubCategory && a.subcategory!==state.filterSubCategory) return false;
+    if(state.filterAssignedTo && a.assignedTo!==state.filterAssignedTo) return false;
+    if(state.filterDateFrom || state.filterDateTo){
+      if(!a.createdIso) return false;
+      const d=new Date(a.createdIso);
+      if(state.filterDateFrom){
+        const from=new Date(state.filterDateFrom+"T00:00:00");
+        if(d<from) return false;
+      }
+      if(state.filterDateTo){
+        const to=new Date(state.filterDateTo+"T23:59:59");
+        if(d>to) return false;
+      }
+    }
+    return true;
+  }
+  function buildActionButtonsHtml(a){
+    const actions=a.actions||[];
+    return actions.map(name=>{
+      let cls="btn-pill btn-green";
+      if(["NYSC","SIWES","ReNewAssign","ReNewAssign2","NewAssign","NewAssign2","ReAssign"].includes(name)) cls="btn-pill btn-dark";
+      if(name==="Archive") cls="btn-pill btn-orange";
+      if(name==="PDF"||name==="View") cls="btn-pill btn-outline";
+      return `<button class="${cls}" type="button" onclick="handleAction('${name}',${a.id})">${name}</button>`;
+    }).join("");
+  }
+  function renderActivities(){
+    const container=document.getElementById("activitiesList");
+    container.innerHTML="";
+    const acts=state.activities.filter(activityMatchesFilters);
+    if(!acts.length){
+      container.innerHTML="<p class='text-muted'>No activities found.</p>";
+      return;
+    }
+    for(const a of acts){
+      const card=document.createElement("div");
+      card.className="activity-card";
+      const statusClass=a.status==="Treated"?"treated":"";
+      card.innerHTML=`
+        <div onclick="openDetailsById(${a.id})">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;">
+            <div class="activity-title">${a.title}</div>
+            <span class="activity-status-tag ${statusClass}">${a.status||"NotTreated"}</span>
+          </div>
+          <div class="activity-meta-card">
+            <span>${a.date}</span>
+            <span>${a.category||"Uncategorized"}</span>
+          </div>
+        </div>
+        <div>${buildActionButtonsHtml(a)}</div>
+      `;
+      container.appendChild(card);
+    }
+  }
+
+  /************** DETAILS **************/
+  function toggleDetails(show){
+    const pane=document.getElementById("detailsPane");
+    if(window.innerWidth<=1000){
+      pane.classList.toggle("mobile-visible",!!show);
+    }else{
+      pane.style.display=show?"block":"none";
+    }
+  }
+  async function openDetailsById(id){
+    const base=state.activities.find(x=>x.id===id);
+    state.DGOselected=base||null;
+    if(!base) return;
+    toggleDetails(true);
+    renderDetails(base);
+    const extra=await callFlow("loadActivityDetails",{activityId:id});
+    if(extra){
+      const merged=Object.assign({},base,extra);
+      state.DGOselected=merged;
+      renderDetails(merged);
+    }
+  }
+  function renderDetails(a){
+    document.getElementById("detailsTitle").textContent=a.title||"Details";
+    const body=document.getElementById("detailsBody");
+    const attachments=a.attachments||[];
+    const attHtml=attachments.length?attachments.map(att=>`<a href="${att.url}" target="_blank" rel="noopener" style="display:block;font-size:12px;">${att.name}</a>`).join(""):"<span class='text-muted'>No attachments.</span>";
+    body.innerHTML=`
+      <p><strong>ID:</strong> ${a.id}</p>
+      <p><strong>Status:</strong> ${a.status||"NotTreated"}</p>
+      <p><strong>Date:</strong> ${a.date}</p>
+      <p><strong>Category:</strong> ${a.category||"Uncategorized"}</p>
+      <p><strong>SubCategory:</strong> ${a.subcategory||"()"}</p>
+      <p><strong>Assigned To:</strong> ${a.assignedTo||"()"}</p>
+      <p><strong>Co-Assigned To:</strong> ${a.coAssignedTo||"()"}</p>
+      <p><strong>Copy To:</strong> ${a.ccTo||"()"}</p>
+      <p><strong>Priority:</strong> ${a.priority||"Medium"}</p>
+      <p><strong>Comments:</strong><br>${(a.comments||"").replace(/\n/g,"<br>")}</p>
+      <p><strong>Attachments:</strong><br>${attHtml}</p>`;
+  }
+
+  /************** ACTIONS (Switch) **************/
+  function handleAction(actionName,activityId){
+    const activity=state.activities.find(a=>a.id===activityId);
+    if(!activity) return;
+    state.DGOselected=activity;
+
+    state.assignmentMeta=null;
+    state.selectedCategory="";
+    state.selectedSubcategory="";
+    state.selectedAssignedTo=activity.assignedTo||"";
+    state.selectedCoAssignedTo=activity.coAssignedTo||"";
+    state.selectedCcEmails=activity.ccTo?activity.ccTo.split(";").filter(Boolean):[];
+    state.priority=activity.priority||"Medium";
+    state.assignmentPreviewMode=false;
+    state.newActivityTask=null;
+
+    switch(actionName){
+      case "Assign":
+        navigate("category",{assignmentType:"newassignment"});break;
+      case "ReAssign":
+        navigate("category",{assignmentType:"reassignment"});break;
+      case "NewAssign":
+      case "NewAssign2":
+        navigate("assignment",{assignmentType:"newassignment"});break;
+      case "ReNewAssign":
+      case "ReNewAssign2":
+        navigate("assignment",{assignmentType:"reassignment"});break;
+      case "NYSC":
+        showOverlay("NYSC");break;
+      case "SIWES":
+        showOverlay("SIWES");break;
+      case "Archive":
+        showOverlay("Archive");break;
+      case "PDF":
+      case "View":
+        showAttachmentsPane(activity);break;
+    }
+  }
+
+  /************** OVERLAYS (NYSC/SIWES/Archive) **************/
+  function showOverlay(type){
+    closeOverlay();
+    const id = type==="NYSC"?"dialogNYSC" : type==="SIWES"?"dialogSIWES" : "dialogArchive";
+    document.getElementById(id).classList.add("visible");
+  }
+  function closeOverlay(){
+    ["dialogNYSC","dialogSIWES","dialogArchive"].forEach(id=>document.getElementById(id).classList.remove("visible"));
+  }
+  async function confirmSpecial(type){
+    closeOverlay();
+    if(!state.DGOselected) return;
+    await callFlow("updateSpecial",{activityId:state.DGOselected.id,action:type});
+    await loadActivities();
+  }
+
+  /************** FILTERS OVERLAY **************/
+  function openFiltersOverlay(){
+    const overlay=document.getElementById("filtersOverlay");
+    const catSelect=document.getElementById("filterCategorySelect");
+    const subSelect=document.getElementById("filterSubCategorySelect");
+    const assignedSelect=document.getElementById("filterAssignedToSelect");
+    const statusSelect=document.getElementById("filterStatusSelect");
+    const dateFrom=document.getElementById("filterDateFrom");
+    const dateTo=document.getElementById("filterDateTo");
+
+    const cats=[...new Set(state.activities.map(a=>a.category).filter(Boolean))].sort();
+    catSelect.innerHTML=`<option value="">(All Categories)</option>`;
+    cats.forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;catSelect.appendChild(o);});
+    catSelect.value=state.filterCategory||"";
+
+    const subs=[...new Set(state.activities.filter(a=>!state.filterCategory||a.category===state.filterCategory).map(a=>a.subcategory).filter(Boolean))].sort();
+    subSelect.innerHTML=`<option value="">(All Subcategories)</option>`;
+    subs.forEach(s=>{const o=document.createElement("option");o.value=s;o.textContent=s;subSelect.appendChild(o);});
+    subSelect.value=state.filterSubCategory||"";
+
+    const assigneds=[...new Set(state.activities.map(a=>a.assignedTo).filter(Boolean))].sort();
+    assignedSelect.innerHTML=`<option value="">(All)</option>`;
+    assigneds.forEach(e=>{const o=document.createElement("option");o.value=e;o.textContent=e;assignedSelect.appendChild(o);});
+    assignedSelect.value=state.filterAssignedTo||"";
+
+    statusSelect.value=state.filter;
+    dateFrom.value=state.filterDateFrom||"";
+    dateTo.value=state.filterDateTo||"";
+
+    overlay.classList.add("visible");
+  }
+  function closeFiltersOverlay(){
+    document.getElementById("filtersOverlay").classList.remove("visible");
+  }
+  function applyFiltersFromOverlay(){
+    const catSelect=document.getElementById("filterCategorySelect");
+    const subSelect=document.getElementById("filterSubCategorySelect");
+    const statusSelect=document.getElementById("filterStatusSelect");
+    const assignedSelect=document.getElementById("filterAssignedToSelect");
+    const dateFrom=document.getElementById("filterDateFrom");
+    const dateTo=document.getElementById("filterDateTo");
+
+    state.filterCategory=catSelect.value||"";
+    state.filterSubCategory=subSelect.value||"";
+    state.filter=statusSelect.value||"All";
+    state.filterAssignedTo=assignedSelect.value||"";
+    state.filterDateFrom=dateFrom.value||"";
+    state.filterDateTo=dateTo.value||"";
+
+    ["all","treated","nottreated"].forEach(id=>{
+      const btn=document.getElementById("seg-"+id);
+      if(btn) btn.classList.remove("active");
+    });
+    if(state.filter==="All") document.getElementById("seg-all").classList.add("active");
+    if(state.filter==="Treated") document.getElementById("seg-treated").classList.add("active");
+    if(state.filter==="NotTreated") document.getElementById("seg-nottreated").classList.add("active");
+
+    closeFiltersOverlay();
+    renderActivities();
+  }
+  function resetFiltersFromOverlay(){
+    state.filterCategory="";
+    state.filterSubCategory="";
+    state.filterAssignedTo="";
+    state.filterDateFrom="";
+    state.filterDateTo="";
+    state.filter="All";
+    ["all","treated","nottreated"].forEach(id=>{
+      const btn=document.getElementById("seg-"+id);
+      if(btn) btn.classList.remove("active");
+    });
+    document.getElementById("seg-all").classList.add("active");
+    closeFiltersOverlay();
+    renderActivities();
+  }
+
+  /************** ATTACHMENTS PANEL **************/
+  function showAttachmentsPane(activity){
+    state.DGOselected=activity;
+    const pane=document.getElementById("attachmentsPane");
+    const titleEl=document.getElementById("attachmentsTitle");
+    const listEl=document.getElementById("attachmentsList");
+    const frameEl=document.getElementById("attachmentFrame");
+    const attachments=activity.attachments||[];
+
+    titleEl.textContent=activity.title||"Attachments";
+    listEl.innerHTML="";
+
+    if(!attachments.length){
+      listEl.innerHTML="<p class='text-muted'>No attachments available.</p>";
+      frameEl.src="";
+    }else{
+      attachments.forEach((att,index)=>{
+        const div=document.createElement("div");
+        div.className="attachments-item"+(index===0?" active":"");
+        div.textContent=att.name||("Attachment "+(index+1));
+        div.onclick=()=>selectAttachment(index);
+        listEl.appendChild(div);
+      });
+      state.attachmentsSelectedIndex=0;
+      frameEl.src=attachments[0].url;
+    }
+    pane.classList.add("visible");
+  }
+  function hideAttachmentsPane(){
+    document.getElementById("attachmentsPane").classList.remove("visible");
+  }
+  function selectAttachment(index){
+    const a=state.DGOselected;
+    if(!a||!a.attachments||!a.attachments[index])return;
+    state.attachmentsSelectedIndex=index;
+    document.getElementById("attachmentFrame").src=a.attachments[index].url;
+    const listEl=document.getElementById("attachmentsList");
+    Array.from(listEl.children).forEach((c,idx)=>c.classList.toggle("active",idx===index));
+  }
+
+  /************** CATEGORY MASTER / DSU **************/
+  function initCategoryDropdowns(){
+    const catSelect=document.getElementById("categorySelect");
+    const subSelect=document.getElementById("subcategorySelect");
+    if(!catSelect||!subSelect)return;
+
+    const cats=[...new Set(state.categoriesMaster.map(r=>r.Category))].sort();
+    catSelect.innerHTML=`<option value="">Select Category</option>`;
+    cats.forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;catSelect.appendChild(o);});
+
+    subSelect.innerHTML=`<option value="">Select Subcategory</option>`;
+
+    if(state.selectedCategory){
+      catSelect.value=state.selectedCategory;
+      onCategoryChange(state.selectedCategory,true);
+      if(state.selectedSubcategory){subSelect.value=state.selectedSubcategory;}
+    }
+    buildUserSelects();
+  }
+  function onCategoryChange(category,fromInit=false){
+    state.selectedCategory=category||"";
+    state.selectedSubcategory="";
+    const subSelect=document.getElementById("subcategorySelect");
+    if(!subSelect)return;
+    subSelect.innerHTML=`<option value="">Select Subcategory</option>`;
+    if(!category){
+      updateAssignmentFromCategory(null);return;
+    }
+    const subs=state.categoriesMaster.filter(r=>r.Category===category).map(r=>r.Subcategory);
+    [...new Set(subs)].forEach(sc=>{
+      const o=document.createElement("option");o.value=sc;o.textContent=sc;subSelect.appendChild(o);
+    });
+    if(!fromInit){updateAssignmentFromCategory(null);}
+  }
+  function onSubcategoryChange(subcategory){
+    state.selectedSubcategory=subcategory||"";
+    if(!subcategory||!state.selectedCategory){
+      updateAssignmentFromCategory(null);return;
+    }
+    const row=state.categoriesMaster.find(r=>r.Category===state.selectedCategory && r.Subcategory===subcategory);
+    updateAssignmentFromCategory(row||null);
+  }
+  function getDsuEmail(key){
+    if(!key)return"";
+    const rec=state.departmentsInfo.find(d=>d.DSU_KEY===key);
+    return rec && rec.DSU_Head_Personal_Email ? rec.DSU_Head_Personal_Email : "";
+  }
+  function updateAssignmentFromCategory(row){
+    if(!row){
+      state.assignmentMeta=null;
+      updateAssignmentLabels();
+      buildAssignmentTables();
+      buildCategoryPreview();
+      syncUserSelectorsUI();
+      return;
+    }
+    const primaryDSU=row["Default Primary Responsible"]||"";
+    const supportDSU=row["Default Supporting Department/Unit"]||"";
+    const info1=row.INFORMDSU1||"";
+    const info2=row.INFORMDSU2||"";
+    const info3=row.INFORMDSU3||"";
+    const timeline=row.Timeline||"";
+    const priority=row.Priority||"Medium";
+    const permissions=row.Permissions||"";
+
+    const assignedToEmail=getDsuEmail(primaryDSU);
+    const supportEmail=getDsuEmail(supportDSU);
+    const copyEmails=[info1,info2,info3].map(getDsuEmail).filter(Boolean);
+    const copyTo=copyEmails.join(";");
+
+    state.assignmentMeta={
+      category:row.Category,
+      categoryCode:row["Category Code"],
+      subcategory:row.Subcategory,
+      subCategoryCode:row["SubCategory Code"],
+      primaryDSU,
+      supportDSU,
+      infoDSU1:info1,
+      infoDSU2:info2,
+      infoDSU3:info3,
+      timeline,
+      priority,
+      permissions,
+      assignedTo:assignedToEmail,
+      coAssignedTo:supportEmail,
+      copyTo
+    };
+
+    state.priority=priority||state.priority;
+    state.selectedAssignedTo=assignedToEmail||state.selectedAssignedTo;
+    state.selectedCoAssignedTo=supportEmail||state.selectedCoAssignedTo;
+    state.selectedCcEmails=copyTo?copyTo.split(";").filter(Boolean):state.selectedCcEmails;
+
+    if(state.DGOselected){
+      state.DGOselected.category=row.Category;
+      state.DGOselected.subcategory=row.Subcategory;
+      state.DGOselected.categorization=row.Category+" / "+row.Subcategory;
+      state.DGOselected.assignedTo=state.selectedAssignedTo;
+      state.DGOselected.coAssignedTo=state.selectedCoAssignedTo;
+      state.DGOselected.ccTo=state.selectedCcEmails.join(";");
+      state.DGOselected.priority=state.priority;
+    }
+
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+    syncUserSelectorsUI();
+  }
+  function updateAssignmentLabels(){
+    document.getElementById("assignedToLabel").textContent=state.selectedAssignedTo||"()";
+    document.getElementById("coAssignedToLabel").textContent=state.selectedCoAssignedTo||"()";
+    document.getElementById("copyToLabel").textContent=state.selectedCcEmails.join("; ")||"()";
+    document.getElementById("priorityValueLabel").textContent=state.priority||"Medium";
+    document.getElementById("priorityBox").textContent="Priority: ("+(state.priority||"Medium")+")";
+  }
+
+  /************** USER SELECTS (AssignedTo, CoAssignedTo, CC) **************/
+  function buildUserSelects(){
+    const assignedSel=document.getElementById("assignedToSelect");
+    const coAssignedSel=document.getElementById("coAssignedToSelect");
+    const dsus=state.departmentsInfo||[];
+    const optionsHtml=dsus.map(d=>{
+      const email=d.DSU_Head_Personal_Email||"";
+      const label=(d.DSU_HeadTitle||d.DSU_KEY||"")+(email?` (${email})`:"");
+      return `<option value="${email}">${label}</option>`;
+    }).join("");
+    if(assignedSel) assignedSel.innerHTML=`<option value="">(use default)</option>`+optionsHtml;
+    if(coAssignedSel) coAssignedSel.innerHTML=`<option value="">(use default)</option>`+optionsHtml;
+    syncUserSelectorsUI();
+    buildCcOptionsList("");
+    renderCcSelectedChips();
+  }
+  function syncUserSelectorsUI(){
+    const assignedSel=document.getElementById("assignedToSelect");
+    const coAssignedSel=document.getElementById("coAssignedToSelect");
+    if(assignedSel) assignedSel.value=state.selectedAssignedTo||"";
+    if(coAssignedSel) coAssignedSel.value=state.selectedCoAssignedTo||"";
+    renderCcSelectedChips();
+  }
+  function onAssignedToOverride(email){
+    state.selectedAssignedTo=email || (state.assignmentMeta && state.assignmentMeta.assignedTo) || "";
+    if(state.DGOselected) state.DGOselected.assignedTo=state.selectedAssignedTo;
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+  }
+  function onCoAssignedToOverride(email){
+    state.selectedCoAssignedTo=email || (state.assignmentMeta && state.assignmentMeta.coAssignedTo) || "";
+    if(state.DGOselected) state.DGOselected.coAssignedTo=state.selectedCoAssignedTo;
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+  }
+  function searchCCOptions(q){buildCcOptionsList(q||"");}
+  function buildCcOptionsList(query){
+    const listDiv=document.getElementById("ccOptionsList");
+    if(!listDiv)return;
+    const q=query.toLowerCase();
+    const dsus=state.departmentsInfo||[];
+    const filtered=dsus.filter(d=>{
+      const email=(d.DSU_Head_Personal_Email||"").toLowerCase();
+      const title=(d.DSU_HeadTitle||"").toLowerCase();
+      const key=(d.DSU_KEY||"").toLowerCase();
+      return !q || email.includes(q) || title.includes(q) || key.includes(q);
+    }).slice(0,50);
+    if(!filtered.length){
+      listDiv.innerHTML="<div class='text-muted'>No matches.</div>";
+      return;
+    }
+    listDiv.innerHTML=filtered.map(d=>{
+      const email=d.DSU_Head_Personal_Email||"";
+      const label=(d.DSU_HeadTitle||d.DSU_KEY||"")+(email?` (${email})`:"");
+      return `<div class="cc-option-item" onclick="addCcEmail('${email}')">${label}</div>`;
+    }).join("");
+  }
+  function addCcEmail(email){
+    if(!email)return;
+    if(!state.selectedCcEmails.includes(email)) state.selectedCcEmails.push(email);
+    if(state.DGOselected) state.DGOselected.ccTo=state.selectedCcEmails.join(";");
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+    renderCcSelectedChips();
+  }
+  function removeCcEmail(email){
+    state.selectedCcEmails=state.selectedCcEmails.filter(e=>e!==email);
+    if(state.DGOselected) state.DGOselected.ccTo=state.selectedCcEmails.join(";");
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+    renderCcSelectedChips();
+  }
+  function renderCcSelectedChips(){
+    const chipsDiv=document.getElementById("ccSelectedChips");
+    if(!chipsDiv)return;
+    if(!state.selectedCcEmails.length){
+      chipsDiv.innerHTML="<span class='text-muted'>No CC recipients selected.</span>";
+      return;
+    }
+    chipsDiv.innerHTML=state.selectedCcEmails.map(email=>
+      `<span class="cc-chip">${email}<button type="button" onclick="removeCcEmail('${email}')">×</button></span>`
+    ).join("");
+  }
+
+  /************** CATEGORY PREVIEW (live) **************/
+  function buildCategoryPreview(){
+    const a=state.DGOselected;
+    const meta=state.assignmentMeta;
+    const tbody=document.getElementById("categoryPreviewBody");
+    if(!tbody)return;
+    const rows=[
+      ["Activity ID", a?a.id:"()"],
+      ["Category", meta?meta.category:(state.selectedCategory||(a&&a.category)||"()")],
+      ["Subcategory", meta?meta.subcategory:(state.selectedSubcategory||(a&&a.subcategory)||"()")],
+      ["Category Code", meta?meta.categoryCode:"()"],
+      ["SubCategory Code", meta?meta.subCategoryCode:"()"],
+      ["Primary DSU", meta?meta.primaryDSU:"()"],
+      ["Supporting DSU", meta?meta.supportDSU:"()"],
+      ["Assigned To", state.selectedAssignedTo || (meta&&meta.assignedTo) || (a&&a.assignedTo) || "()"],
+      ["Co-Assigned To", state.selectedCoAssignedTo || (meta&&meta.coAssignedTo) || (a&&a.coAssignedTo) || "()"],
+      ["Copy To", state.selectedCcEmails.join(";") || (meta&&meta.copyTo) || (a&&a.ccTo) || "()"],
+      ["Timeline", meta?meta.timeline:"()"],
+      ["Priority", state.priority || (meta&&meta.priority) || "Medium"],
+      ["Action Required", state.selectedActionRequired || "()"],
+      ["Comments", state.commentsDraft || (a&&a.comments) || ""]
+    ];
+    tbody.innerHTML=rows.map(([f,v])=>`<tr><td>${f}</td><td>${v}</td></tr>`).join("");
+    document.getElementById("priorityBox").textContent="Priority: ("+(state.priority||"Medium")+")";
+    document.getElementById("actionRequiredBox").innerHTML=`Action Required: (<span id="actionRequiredValueLabel">${state.selectedActionRequired||""}</span>)`;
+  }
+  function setActionRequired(val){
+    state.selectedActionRequired=val;
+    const label=document.getElementById("actionRequiredValueLabel");
+    if(label) label.textContent=val;
+    document.querySelectorAll(".chip-btn").forEach(btn=>{
+      if(["Review","Approval","Information"].includes(btn.textContent.trim())){
+        btn.classList.toggle("active",btn.textContent.trim()===val);
+      }
+    });
+    buildCategoryPreview();
+  }
+  function setPriority(val){
+    state.priority=val;
+    if(state.DGOselected) state.DGOselected.priority=val;
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+    document.querySelectorAll(".chip-btn").forEach(btn=>{
+      if(["P1 (High)","P2 (Medium)","P3 (Normal)","P4 (Low)"].includes(btn.textContent.trim())){
+        btn.classList.toggle("active",btn.textContent.trim()===val);
+      }
+    });
+  }
+  function clearAssignmentEntries(){
+    state.selectedActionRequired="";
+    state.commentsDraft="";
+    state.assignmentMeta=null;
+    state.priority="Medium";
+    state.selectedCategory="";
+    state.selectedSubcategory="";
+    state.selectedAssignedTo="";
+    state.selectedCoAssignedTo="";
+    state.selectedCcEmails=[];
+    state.assignmentPreviewMode=false;
+    state.newActivityTask=null;
+    const catSel=document.getElementById("categorySelect");
+    const subSel=document.getElementById("subcategorySelect");
+    if(catSel) catSel.value="";
+    if(subSel) subSel.innerHTML=`<option value="">Select Subcategory</option>`;
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+    syncUserSelectorsUI();
+  }
+
+  /************** ASSIGNMENT TABLE (left pane) **************/
+  function buildAssignmentTables(){
+    const a=state.DGOselected;
+    const meta=state.assignmentMeta;
+    const tbody=document.getElementById("assignmentTableBody");
+    if(!tbody)return;
+    const rows=[
+      ["Activity ID", a?a.id:"()"],
+      ["Category/SubCategory",
+        (meta ? (meta.category+" / "+meta.subcategory) :
+         (state.selectedCategory || (a&&a.category) || "Uncategorized") +
+         " / " + (state.selectedSubcategory || (a&&a.subcategory) || ""))
+      ],
+      ["Categorization", a && a.categorization ? a.categorization : "/"],
+      ["Assign To", state.selectedAssignedTo || (meta&&meta.assignedTo) || (a&&a.assignedTo) || "()"],
+      ["Co-Assign To", state.selectedCoAssignedTo || (meta&&meta.coAssignedTo) || (a&&a.coAssignedTo) || "()"],
+      ["Copy To", state.selectedCcEmails.join(";") || (meta&&meta.copyTo) || (a&&a.ccTo) || "()"],
+      ["Priority", state.priority || (meta&&meta.priority) || "Medium"],
+      ["Action Required", state.selectedActionRequired || "()"],
+      ["Comments", state.commentsDraft || (a&&a.comments) || ""]
+    ];
+    tbody.innerHTML=rows.map(([f,v])=>`<tr><td>${f}</td><td>${v}</td></tr>`).join("");
+  }
+
+  /************** COMMENTS **************/
+  function saveComments(){
+    state.commentsDraft=document.getElementById("commentsBox").value;
+    if(state.DGOselected){
+      callFlow("saveComments",{activityId:state.DGOselected.id,comments:state.commentsDraft});
+    }
+    buildAssignmentTables();
+    buildCategoryPreview();
+    navigate("category");
+  }
+
+  /************** PREVIEW EMAIL FROM FLOW **************/
+  async function loadPreviewEmail(){
+    if(!state.DGOselected) return;
+    const res=await callFlow("loadPreviewEmail",{
+      activityId:state.DGOselected.id,
+      assignmentType:state.assignmentType
+    });
+    const html = res && res.html
+      ? res.html
+      : `<p>DHRA,</p><p>A new activity has been initiated.</p><p><strong>Subject:</strong> ${state.DGOselected.title}</p>`;
+    document.getElementById("previewEmailBody").innerHTML=html;
+  }
+
+  /************** PREVIEW ASSIGNMENT (snapshot) **************/
+  function previewAssignment(){
+    if(!state.DGOselected || !state.selectedAssignedTo || !state.selectedCategory || !state.selectedSubcategory){
+      alert("Select Activity, Category, SubCategory and AssignedTo before previewing.");
+      return;
+    }
+    const meta=state.assignmentMeta||{};
+    const now=new Date();
+    const yyyy=now.getFullYear();
+    const mm=String(now.getMonth()+1).padStart(2,"0");
+    const dd=String(now.getDate()).padStart(2,"0");
+    const todayText=`${yyyy}${mm}${dd}`;
+    const refId=[
+      todayText,
+      state.DGOselected.id,
+      meta.categoryCode||"",
+      meta.subCategoryCode||"",
+      ""
+    ].join("-");
+
+    state.newActivityTask={
+      ActivityID:state.DGOselected.id,
+      Title:state.DGOselected.title,
+      Description:state.DGOselected.comments || state.DGOselected.description || "",
+      Status:"New",
+      Category:state.selectedCategory,
+      SubCategory:state.selectedSubcategory,
+      AssignedTo:state.selectedAssignedTo,
+      AssignedDSU:meta.primaryDSU||"",
+      supportingAssignedTo:state.selectedCoAssignedTo,
+      SupportDSU:meta.supportDSU||"",
+      TaskDueDate:`${yyyy}-${mm}-${dd}`,
+      CopyTo:state.selectedCcEmails.join(";"),
+      Priority:state.priority,
+      Reference_ID:refId,
+      Comments:""
+    };
+    state.assignmentPreviewMode=true;
+    document.getElementById("assignmentStatusLabel").textContent="Previewing (Ready to Submit)";
+    buildAssignmentTables();
+    loadPreviewEmail();
+  }
+
+  /************** SUBMIT ASSIGNMENT **************/
+  async function submitAssignment(){
+    if(!state.DGOselected){
+      alert("No activity selected.");
+      return;
+    }
+    const meta=state.assignmentMeta||{};
+    const ccJoined=state.selectedCcEmails.join(";");
+    await callFlow("updateAssignment",{
+      activityId:state.DGOselected.id,
+      assignmentType:state.assignmentType,
+      assignTo:state.selectedAssignedTo || meta.assignedTo || state.DGOselected.assignedTo || "",
+      coAssignTo:state.selectedCoAssignedTo || meta.coAssignedTo || state.DGOselected.coAssignedTo || "",
+      ccTo:ccJoined || meta.copyTo || state.DGOselected.ccTo || "",
+      priority:state.priority || meta.priority || "Medium",
+      actionRequired:state.selectedActionRequired || "",
+      comments:state.commentsDraft || state.DGOselected.comments || "",
+      category:meta.category || state.selectedCategory || state.DGOselected.category || "",
+      subcategory:meta.subcategory || state.selectedSubcategory || state.DGOselected.subcategory || "",
+      categoryCode:meta.categoryCode || "",
+      subCategoryCode:meta.subCategoryCode || "",
+      timeline:meta.timeline || "",
+      permissions:meta.permissions || "",
+      newActivityTask:state.newActivityTask || null
+    });
+    await loadActivities();
+    navigate("activities");
+  }
+
+  /************** LOAD ACTIVITIES **************/
+  function formatDateToDDMMYYYY(dt){
+    if(!dt)return"";
+    const d=new Date(dt);
+    if(isNaN(d.getTime()))return"";
+    const dd=String(d.getDate()).padStart(2,"0");
+    const mm=String(d.getMonth()+1).padStart(2,"0");
+    const yyyy=d.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  }
+  function parseAttachments(str){
+    if(!str)return[];
+    const t=String(str).trim();
+    if(!t)return[];
+    return t.split(";").map(s=>s.trim()).filter(Boolean).map((url,i)=>({name:"Attachment_"+(i+1),url}));
+  }
+  function generateActions(item){
+    const actions=[];
+    if(item.Status==="Treated"){
+      actions.push("ReNewAssign","ReNewAssign2","ReAssign");
+    }else{
+      actions.push("Assign","NewAssign","NewAssign2");
+    }
+    actions.push("PDF","View","Archive");
+    if((item.Title||"").toUpperCase().includes("NYSC")) actions.push("NYSC");
+    if((item.Title||"").toUpperCase().includes("SIWES")) actions.push("SIWES");
+    return actions;
+  }
+  function normalizeActivity(item){
+    const atts=parseAttachments(item.Attachments);
+    const first=atts.length?atts[0].url:"";
+    return{
+      id:item.ID,
+      title:item.Title,
+      comments:item.Description||"",
+      status:item.Status||"Unknown",
+      priority:item.Priority||"Not Assigned",
+      category:item.Category||"Uncategorized",
+      subcategory:item.Subcategory||item.SubCategory||"",
+      date:formatDateToDDMMYYYY(item.Created),
+      createdIso:item.Created||"",
+      assignedTo:item.AssignedTo && item.AssignedTo!=="N/A"?item.AssignedTo:"",
+      coAssignedTo:"",
+      ccTo:"",
+      attachments:atts,
+      pdfUrl:first,
+      actions:generateActions(item)
+    };
+  }
+  async function loadActivities(){
+    const res=await callFlow("loadActivities");
+    if(Array.isArray(res)){
+      state.activities=res.map(normalizeActivity);
+    }else if(res && Array.isArray(res.items)){
+      state.activities=res.items.map(normalizeActivity);
+    }else{
+      // fallback dev sample
+      const fallback=[
+        {
+          ID:17553,
+          Title:"HENSTEIN RESOURCES LTD (FLEET OPERATIONS, ORGANISATIONAL LEADERSHIP AND CRISIS RESPONSE PROGRAM).pdf",
+          Description:"No description provided",
+          Status:"Unknown",
+          Priority:"Not Assigned",
+          Category:"Uncategorized",
+          Created:"2025-12-09T14:33:23Z",
+          AssignedTo:"N/A",
+          Attachments:""
+        }
+      ];
+      state.activities=fallback.map(normalizeActivity);
+    }
+    renderActivities();
+  }
+
+  /************** LOAD REFERENCE DATA **************/
+  async function loadReferenceData(){
+    try{
+      const cats=await fetch("categories.json").then(r=>r.json());
+      const dsus=await fetch("departments.json").then(r=>r.json());
+      state.categoriesMaster=Array.isArray(cats)?cats:(cats&&cats.items)||[];
+      state.departmentsInfo=Array.isArray(dsus)?dsus:(dsus&&dsus.items)||[];
+      initCategoryDropdowns();
+    }catch(e){
+      console.error("Error loading reference data",e);
+    }
+  }
+
+  /************** BOOTSTRAP **************/
+  (function bootstrap(){
+    loadActivities();
+    loadReferenceData();
+  })();
+</script>
+</body>
+</html>

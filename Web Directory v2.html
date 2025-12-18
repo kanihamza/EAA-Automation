@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Project Launchpad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-6">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-white mb-1">My Network</h1>
+                <p class="text-gray-400 text-sm">Central hub for all deployed terminals and apps.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="text-sm bg-gray-800 px-3 py-1.5 rounded-full text-blue-400 border border-gray-700 font-mono">
+                    <span id="domain-count">0</span> Active Endpoints
+                </div>
+            </div>
+        </header>
+
+        <!-- Search & Filter -->
+        <div class="relative mb-8 group">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i data-lucide="search" class="text-gray-500 w-5 h-5 group-focus-within:text-blue-500 transition-colors"></i>
+            </div>
+            <input type="text" id="search" placeholder="Search by name or extension..." class="w-full bg-gray-800/50 border border-gray-700 rounded-xl py-4 pl-10 pr-4 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-500 backdrop-blur-sm">
+        </div>
+
+        <!-- Grid -->
+        <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <!-- Cards injected via JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden flex-col items-center justify-center py-20 text-gray-500">
+            <i data-lucide="globe-2" class="w-12 h-12 mb-3 opacity-20"></i>
+            <p>No matching domains found.</p>
+        </div>
+    </div>
+
+    <script>
+        // Combined and Alphabetized List
+        const domains = [
+            "activityweb.page.gd",
+            "advanced.infinityfreeapp.com",
+            "assignmentsweb.page.gd",
+            "bulkassign.page.gd",
+            "bulkassignweb.page.gd",
+            "bulkops.page.gd",
+            "correspondence.page.gd",
+            "dgo.fwh.is",
+            "dgodocs.page.gd",
+            "dgointelportal.page.gd",
+            "dgoterminal.gt.tc",
+            "dgsregistry.page.gd",
+            "digiserve.page.gd",
+            "digitaldocs.page.gd",
+            "digitalglass.page.gd",
+            "digitalops.page.gd",
+            "digitalopshub.page.gd",
+            "directhub.page.gd",
+            "doce.free.nf",
+            "docstrack.page.gd",
+            "eaa.page.gd",
+            "eaaterminal.xo.je",
+            "hub.page.gd",
+            "internal.page.gd",
+            "multipage.ct.ws",
+            "nitda.page.gd",
+            "nitdaweb.page.gd",
+            "remoteops.page.gd",
+            "secureportal.page.gd",
+            "submit.page.gd",
+            "taskshub.free.nf",
+            "terminal.fast-page.org",
+            "webapp.page.gd",
+            "webassign.page.gd",
+            "workspace.page.gd"
+        ];
+
+        const grid = document.getElementById('grid');
+        const countLabel = document.getElementById('domain-count');
+        const searchInput = document.getElementById('search');
+        const emptyState = document.getElementById('empty-state');
+
+        function render(filter = "") {
+            grid.innerHTML = "";
+            const filtered = domains.filter(d => d.toLowerCase().includes(filter.toLowerCase()));
+            countLabel.textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+            } else {
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+            }
+
+            filtered.forEach(domain => {
+                const url = `https://${domain}`;
+                const card = document.createElement('div');
+                card.className = "bg-gray-800/40 border border-gray-700/50 rounded-xl p-5 hover:bg-gray-800 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all group flex flex-col";
+                
+                // Parse Domain
+                const parts = domain.split('.');
+                const mainName = parts[0];
+                const extension = parts.slice(1).join('.');
+
+                // Dynamic coloring based on extension group (for visual variety)
+                let iconColor = "text-blue-400";
+                let iconBg = "bg-blue-500/10";
+                
+                if (domain.includes("page.gd")) { 
+                    iconColor = "text-emerald-400"; iconBg = "bg-emerald-500/10";
+                } else if (domain.includes("free.nf") || domain.includes("infinityfree")) {
+                    iconColor = "text-purple-400"; iconBg = "bg-purple-500/10";
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="${iconBg} p-2 rounded-lg ${iconColor} group-hover:scale-110 transition-transform">
+                            <i data-lucide="globe" class="w-5 h-5"></i>
+                        </div>
+                        <button onclick="copyToClipboard('${url}')" class="text-gray-600 hover:text-white p-1.5 rounded-md hover:bg-gray-700 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Copy Link">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex-1 min-w-0 mb-4">
+                        <h3 class="font-bold text-lg text-white truncate leading-tight capitalize" title="${mainName}">${mainName}</h3>
+                        <p class="text-xs text-gray-500 font-mono truncate mt-0.5 opacity-60 group-hover:opacity-100 transition-opacity">${extension}</p>
+                    </div>
+                    
+                    <a href="${url}" target="_blank" class="flex items-center justify-center gap-2 w-full bg-gray-900 border border-gray-700 hover:border-blue-500/50 hover:bg-blue-600 text-gray-400 hover:text-white py-2 rounded-lg text-sm font-medium transition-all group-hover:shadow-md">
+                        <span>Launch</span>
+                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Subtle toast could go here, for now just standard behavior
+            });
+        }
+
+        searchInput.addEventListener('input', (e) => render(e.target.value));
+
+        // Initial render
+        lucide.createIcons();
+        render();
+    </script>
+</body>
+</html>

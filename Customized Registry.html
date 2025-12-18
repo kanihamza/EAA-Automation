@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NITDA Document Submission</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- TailwindCSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+
+  <!-- Tailwind config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            nitdaGreen: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              300: '#86efac',
+              400: '#4ade80',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+              950: '#052e16',
+            },
+            nitdaGray: {
+              50: '#f9fafb',
+              100: '#f3f4f6',
+              200: '#e5e7eb',
+              300: '#d1d5db',
+              400: '#9ca3af',
+              500: '#6b7280',
+              600: '#4b5563',
+              700: '#374151',
+              800: '#1f2933',
+              900: '#111827',
+            }
+          },
+          boxShadow: {
+            soft: '0 10px 25px rgba(15, 118, 110, 0.08)',
+            softStrong: '0 20px 45px rgba(15, 118, 110, 0.15)'
+          },
+          borderRadius: { '4xl': '2rem' }
+        }
+      }
+    }
+  </script>
+
+  <!-- Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #ecfeff 0, #f9fafb 40%, #f3f4f6 100%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .glass-card {
+      backdrop-filter: blur(12px);
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(236, 252, 245, 0.98));
+    }
+
+    .danger-card {
+      background: linear-gradient(145deg, rgba(254, 242, 242, 0.98), rgba(254, 226, 226, 0.98));
+    }
+
+    .pulse-dot { position: relative; }
+    .pulse-dot::after {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 999px;
+      border: 2px solid rgba(34, 197, 94, 0.4);
+      animation: pulse 1.4s ease-out infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.7); opacity: 0.85; }
+      80% { transform: scale(1.2); opacity: 0; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+
+    .step-line {
+      position: absolute;
+      top: 1.75rem;
+      left: 1.25rem;
+      width: 2px;
+      height: calc(100% - 2.5rem);
+      background: linear-gradient(to bottom, rgba(34, 197, 94, 0.35), rgba(22, 163, 74, 0.05));
+    }
+
+    .step-icon { box-shadow: 0 14px 30px rgba(22, 163, 74, 0.35); }
+
+    .file-drop {
+      position: relative;
+      border-radius: 1rem;
+      border: 1px dashed rgba(16, 185, 129, 0.4);
+      background: linear-gradient(135deg, rgba(240, 253, 250, 0.9), rgba(255, 255, 255, 0.98));
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .file-drop.dragover,
+    .file-drop:focus-visible {
+      border-color: rgba(5, 150, 105, 1);
+      background: linear-gradient(135deg, rgba(236, 253, 245, 0.95), rgba(255, 255, 255, 1));
+      box-shadow: 0 16px 40px rgba(5, 150, 105, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .status-toast { animation: slideIn 0.28s ease-out; }
+
+    @keyframes slideIn {
+      from { transform: translateY(-10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .badge-soft {
+      background: linear-gradient(to right, rgba(22, 163, 74, 0.08), rgba(5, 150, 105, 0.08));
+    }
+
+    .preview-card {
+      background: linear-gradient(145deg, rgba(248, 250, 252, 0.98), rgba(240, 253, 250, 0.98));
+    }
+
+    .slip-bg {
+      background: radial-gradient(circle at top, rgba(56, 189, 248, 0.16), transparent 55%),
+                  radial-gradient(circle at bottom, rgba(16, 185, 129, 0.18), transparent 60%);
+    }
+
+    /* Screen-reader only utility */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen text-nitdaGray-800 antialiased">
+  <!-- ARIA live region for announcements -->
+  <div id="ariaLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Status toast -->
+  <div id="statusToast" class="fixed top-4 right-4 z-50 hidden" aria-live="polite" aria-atomic="true">
+    <div class="status-toast flex items-start gap-3 rounded-2xl bg-white/95 shadow-softStrong border border-nitdaGreen-100 px-4 py-3">
+      <div id="statusIcon" class="mt-0.5">
+        <i class="fa-solid fa-circle-check text-green-500"></i>
+      </div>
+      <div class="flex-1">
+        <p id="statusTitle" class="text-sm font-semibold text-nitdaGray-900">Saved</p>
+        <p id="statusMessage" class="text-xs text-nitdaGray-600 mt-0.5">Your draft has been updated.</p>
+      </div>
+      <button id="statusClose" class="text-nitdaGray-400 hover:text-nitdaGray-600 text-xs" type="button" aria-label="Close notification">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  </div>
+
+  <main class="relative min-h-screen">
+    <!-- Subtle gradient blob -->
+    <div class="pointer-events-none absolute inset-0 opacity-70">
+      <div class="absolute -top-32 -right-16 w-72 h-72 rounded-full bg-cyan-200/30 blur-3xl"></div>
+      <div class="absolute -bottom-32 -left-16 w-80 h-80 rounded-full bg-emerald-200/30 blur-3xl"></div>
+    </div>
+
+    <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+      <!-- Header -->
+      <header class="mb-8 lg:mb-12 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center justify-center w-14 h-14 rounded-2xl bg-nitdaGreen-50 border border-nitdaGreen-100 shadow-soft">
+            <i class="fa-solid fa-file-shield text-nitdaGreen-700 text-xl"></i>
+          </div>
+          <div>
+            <p class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-nitdaGreen-700 bg-nitdaGreen-50 border border-nitdaGreen-100 rounded-full px-3 py-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
+              NITDA Registry
+            </p>
+            <h1 class="mt-3 text-2xl sm:text-3xl lg:text-4xl font-semibold text-nitdaGray-900">
+              Central Document Submission
+            </h1>
+            <p class="mt-1.5 text-sm sm:text-base text-nitdaGray-600 max-w-xl">
+              Log and submit official documents to the NITDA Registry with a verifiable acknowledgement slip.
+            </p>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-3xl border border-nitdaGreen-100 px-4 py-3 sm:px-5 sm:py-4 shadow-soft max-w-xs ml-auto">
+          <p class="text-[11px] uppercase tracking-[0.18em] text-nitdaGray-500 mb-1">Channel status</p>
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-nitdaGray-900">Online submissions</p>
+              <p class="text-xs text-nitdaGray-500 mt-0.5">Processed by DGS Registry</p>
+            </div>
+            <span class="inline-flex items-center gap-1.5 rounded-full badge-soft text-[11px] font-medium px-2.5 py-1 text-emerald-700 border border-emerald-100">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Live
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content wrapper -->
+      <div id="formSection" class="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8 items-start">
+        <!-- Left: steps / guidance -->
+        <aside class="lg:col-span-2 space-y-5">
+          <div class="glass-card rounded-4xl border border-nitdaGreen-100 shadow-soft p-5 sm:p-6 relative overflow-hidden">
+            <div class="absolute inset-y-8 left-5 step-line hidden sm:block"></div>
+            <div class="space-y-4 relative">
+              <div class="flex gap-3">
+                <div class="relative">
+                  <div class="step-icon w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-semibold">1</div>
+                </div>
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-[0.2em] text-nitdaGray-500">Step 1</p>
+                  <h2 class="text-sm font-semibold text-nitdaGray-900 mt-0.5">Provide document & origin details</h2>
+                  <p class="text-xs text-nitdaGray-500 mt-1">
+                    Capture the originating MDA, subject line, reference number, and channel of receipt. This ensures proper indexing.
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex gap-3">
+                <div class="relative">
+                  <div class="step-icon w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-semibold">2</div>
+                </div>
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-[0.2em] text-nitdaGray-500">Step 2</p>
+                  <h2 class="text-sm font-semibold text-nitdaGray-900 mt-0.5">Attach the document(s)</h2>
+                  <p class="text-xs text-nitdaGray-500 mt-1">
+                    Drag-and-drop or browse to upload scanned copies, letters, memos, or supporting annexures.
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex gap-3">
+                <div class="relative">
+                  <div class="step-icon w-8 h-8 rounded-full bg-emerald-400 text-white flex items-center justify-center text-xs font-semibold">3</div>
+                </div>
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-[0.2em] text-nitdaGray-500">Step 3</p>
+                  <h2 class="text-sm font-semibold text-nitdaGray-900 mt-0.5">Review & submit for registry</h2>
+                  <p class="text-xs text-nitdaGray-500 mt-1">
+                    Confirm the preview, then submit to generate a unique acknowledgement slip for tracking and follow-up.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="danger-card rounded-3xl border border-red-100 px-4 py-4 sm:px-5 sm:py-4 shadow-soft">
+            <div class="flex items-start gap-3">
+              <div class="mt-0.5">
+                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-600">
+                  <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                </span>
+              </div>
+              <div class="flex-1">
+                <p class="text-sm font-semibold text-red-800">Official records only</p>
+                <p class="text-xs text-red-700 mt-1">
+                  Do not upload personal, unofficial, or non-work-related documents. All submissions are logged as part of NITDA’s official record.
+                </p>
+                <p class="mt-2 text-[11px] text-red-700/80">
+                  For highly classified materials, use the designated secure channel and mark the physical envelope accordingly.
+                </p>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Right: main form -->
+        <section class="lg:col-span-3 space-y-5">
+          <form id="submissionForm" class="glass-card rounded-4xl border border-nitdaGreen-100 shadow-softStrong px-4 py-5 sm:px-6 sm:py-6">
+            <div class="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 class="text-base sm:text-lg font-semibold text-nitdaGray-900">Registry entry details</h2>
+                <p class="text-xs sm:text-sm text-nitdaGray-500 mt-1">
+                  All fields marked with <span class="text-red-500">*</span> are mandatory for proper classification.
+                </p>
+              </div>
+              <div class="flex flex-col items-end gap-1">
+                <span class="inline-flex items-center gap-1 rounded-full bg-nitdaGray-50 border border-nitdaGray-200 px-2.5 py-1 text-[11px] text-nitdaGray-600">
+                  <i class="fa-regular fa-clock text-[10px]"></i>
+                  <span id="currentDateLabel"></span>
+                </span>
+                <span class="inline-flex items-center gap-1 text-[10px] text-nitdaGray-500">
+                  <i class="fa-solid fa-shield-halved text-[9px] text-emerald-600"></i>
+                  Internal NITDA use
+                </span>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="registryType" class="block text-xs font-medium text-nitdaGray-700 mb-1.5">
+                    Registry type <span class="text-red-500">*</span>
+                  </label>
+                  <select id="registryType" name="registryType" required
+                          class="mt-0 block w-full rounded-xl border-nitdaGray-200 text-sm shadow-sm focus:border-nitdaGreen-500 focus:ring-nitdaGreen-500">
+                    <option value="">Select type</option>
+                    <option value="incoming">Incoming mail</option>
+                    <option value="outgoing">Outgoing mail</option>
+                    <option value="internal-memo">Internal memo</option>
+                    <option value="circular">Circular</option>
+                    <option value="policy">Policy / guideline</option>
+                    <option value="other">Other official document</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="originatingMDA" class="block text-xs font-medium text-nitdaGray-700 mb-1.5">
+                    Originating MDA / unit <span class="text-red-500">*</span>
+                  </label>
+                  <input id="originatingMDA" name="originatingMDA" type="text" required
+                         class="mt-0 block w-full rounded-xl border-nitdaGray-200 text-sm shadow-sm focus:border-nitdaGreen-500 focus:ring-nitdaGreen-500"
+                         placeholder="e.g. Federal Ministry of Communications, M&E Unit" />
+                </div>
+              </div>
+
+              <div>
+                <label for="subject" class="block text-xs font-medium text-nitdaGray-700 mb-1.5">
+                  Document subject <span class="text-red-500">*</span>
+                </label>
+                <input id="subject" name="subject" type="text" required
+                       class="mt-0 block w-full rounded-xl border-nitdaGray-200 text-sm shadow-sm focus:border-nitdaGreen-500 focus:ring-nitdaGreen-500"
+                       placeholder="Concise subject line as written on the document" />
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label for="referenceNumber" class="block text-xs font-medium text-nitdaGray-700 mb-1.5">
+                    Reference number
+                  </label>
+                  <input id="referenceNumber" name="referenceNumber" type="text"
+                         class="mt-0 block w-full rounded-xl border-nitdaGray-200 text-sm shadow-sm focus:border-nitdaGreen-500 focus:ring-nitdaGreen-500"
+                         placeholder="If available" />
+                </div>
+                <div>
+                  <label for="dateReceived" class="block text-xs font-medium text-nitdaGray-700 mb-1.5">
+                    Date received <span class="text-red-500">*</span>
+                  </label>
+                  <input id="dateReceived" name="dateReceived" type="date" required
+                         class="mt-0 block w-full rounded-xl border-nitdaGray-200 text-sm shadow-sm focus:border-nitdaGreen-500 focus:ring-nitdaGreen-500" />
+                </div>
+                <div>
+                  <label for="channel" class="block text-xs font-medium text-nitdaGray-700 mb-1.5">
+                    Channel of receipt <span class="text-red-500">*</span>
+                  </label>
+                  <select id="channel" name="channel" required
+                          class="mt-0 block w-full rounded-xl border-nitdaGray-200 text-sm shadow-sm focus:border-nitdaGreen-500 focus:ring-nitdaGreen-500">
+                    <option value="">Select channel</option>
+                    <option value="physical">Physical (courier / hand-delivery)</option>
+                    <option value="email">Official email</option>
+                    <option value="portal">Online portal</option>
+                    <option value="other">Other official channel</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label for="priority" class="block text-xs font-medium text-nitdaGray-700 mb-1.5">
+                    Priority level <span class="text-red-500">*</span>
+                  </label>
+                  <select id="priority" name="priority" required
+                          class="mt-0 block w-full rounded-xl border-nitdaGray-200 text-sm shadow-sm focus:border-nitdaGreen-500 focus:ring-nitdaGreen-500">
+                    <option value="">Select priority</option>
+                    <option value="normal">Normal</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="confidential">Confidential</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="category" class="block text-xs font-medium text-nitdaGray-700 mb-1.5">
+                    Document category
+                  </label>
+                  <select id="category" name="category"
+                          class="mt-0 block w-full rounded-xl border-nitdaGray-200 text-sm shadow-sm focus:border-nitdaGreen-500 focus:ring-nitdaGreen-500">
+                    <option value="">Select category (optional)</option>
+                    <option value="procurement">Procurement / contract</option>
+                    <option value="policy">Policy / regulation</option>
+                    <option value="hr">HR / staffing</option>
+                    <option value="finance">Finance / budget</option>
+                    <option value="technical">Technical / ICT</option>
+                    <option value="legal">Legal / MoU</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="internalOwner" class="block text-xs font-medium text-nitdaGray-700 mb-1.5">
+                    Internal owner / directorate
+                  </label>
+                  <input id="internalOwner" name="internalOwner" type="text"
+                         class="mt-0 block w-full rounded-xl border-nitdaGray-200 text-sm shadow-sm focus:border-nitdaGreen-500 focus:ring-nitdaGreen-500"
+                         placeholder="e.g. DGS, Corporate Planning" />
+                </div>
+              </div>
+
+              <div>
+                <label for="description" class="block text-xs font-medium text-nitdaGray-700 mb-1.5">
+                  Brief description / notes
+                </label>
+                <textarea id="description" name="description" rows="3"
+                          class="mt-0 block w-full rounded-2xl border-nitdaGray-200 text-sm shadow-sm focus:border-nitdaGreen-500 focus:ring-nitdaGreen-500"
+                          placeholder="Optional short note to help the registry understand the context or required action."></textarea>
+              </div>
+
+              <div class="pt-2">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <div>
+                    <label class="block text-xs font-medium text-nitdaGray-700 mb-0.5">
+                      Attach document(s) <span class="text-red-500">*</span>
+                    </label>
+                    <p class="text-[11px] text-nitdaGray-500">
+                      PDF, Word, or image scans. Maximum 10 files per submission.
+                    </p>
+                  </div>
+                  <span class="inline-flex items-center gap-1 rounded-full bg-nitdaGreen-50 text-[10px] text-nitdaGreen-700 border border-nitdaGreen-100 px-2 py-1">
+                    <i class="fa-solid fa-lock text-[9px]"></i>
+                    Encrypted in transit
+                  </span>
+                </div>
+
+                <div id="fileDrop" class="file-drop px-4 py-4 sm:px-5 sm:py-5 cursor-pointer"
+                     role="button" tabindex="0"
+                     aria-label="File upload area. Press Enter to browse files or drag and drop files here.">
+                  <input id="fileInput" type="file" class="hidden" multiple
+                         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
+                  <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-2xl bg-nitdaGreen-50 border border-nitdaGreen-100">
+                      <i class="fa-solid fa-upload text-nitdaGreen-600 text-base"></i>
+                    </div>
+                    <div class="flex-1">
+                      <p class="text-xs sm:text-sm text-nitdaGray-700">
+                        <span class="font-semibold text-nitdaGreen-700">Click to browse</span> or drag-and-drop file(s) here
+                      </p>
+                      <p class="text-[11px] text-nitdaGray-500 mt-0.5">
+                        Up to 25 MB per file. Ensure scanned copies are readable.
+                      </p>
+                    </div>
+                  </div>
+                  <div id="fileListWrapper" class="mt-3 border-t border-dashed border-nitdaGray-200/70 pt-3 hidden">
+                    <ul id="fileList" class="space-y-2 text-xs"></ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="preview-card rounded-3xl border border-nitdaGray-200/70 px-4 py-4 sm:px-5 sm:py-4">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <p class="text-xs font-semibold text-nitdaGray-800 flex items-center gap-1.5">
+                    <i class="fa-regular fa-eye text-[11px] text-nitdaGreen-700"></i>
+                    Live preview
+                  </p>
+                  <span id="previewStatus" class="inline-flex items-center gap-1 rounded-full bg-nitdaGray-100 text-[10px] text-nitdaGray-600 px-2 py-0.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-nitdaGray-400"></span>
+                    Waiting for input
+                  </span>
+                </div>
+                <div class="space-y-1.5 text-[11px] text-nitdaGray-600">
+                  <p><span class="font-semibold text-nitdaGray-700">Subject:</span> <span id="previewSubject">–</span></p>
+                  <p><span class="font-semibold text-nitdaGray-700">Origin:</span> <span id="previewOrigin">–</span></p>
+                  <p><span class="font-semibold text-nitdaGray-700">Type / Channel:</span> <span id="previewTypeChannel">–</span></p>
+                  <p><span class="font-semibold text-nitdaGray-700">Priority:</span> <span id="previewPriority">–</span></p>
+                  <p><span class="font-semibold text-nitdaGray-700">Files:</span> <span id="previewFiles">No files selected</span></p>
+                </div>
+              </div>
+
+              <div class="pt-2 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+                <div class="flex items-center gap-2 text-[11px] text-nitdaGray-500">
+                  <i class="fa-regular fa-circle-check text-nitdaGreen-600 text-xs"></i>
+                  <span>By submitting, you confirm this is an official NITDA record.</span>
+                </div>
+                <div class="flex items-center gap-2 justify-end flex-wrap">
+                  <button type="button" id="saveDraftBtn"
+                          class="inline-flex items-center gap-1.5 rounded-full border border-nitdaGray-200 bg-white px-3 py-2 text-xs font-medium text-nitdaGray-700 hover:bg-nitdaGray-50">
+                    <i class="fa-regular fa-floppy-disk text-[11px]"></i>
+                    Save draft (session)
+                  </button>
+                  <button type="button" id="clearDraftBtn"
+                          class="inline-flex items-center gap-1.5 rounded-full border border-nitdaGray-200 bg-white px-3 py-2 text-xs font-medium text-nitdaGray-700 hover:bg-nitdaGray-50">
+                    <i class="fa-regular fa-trash-can text-[11px]"></i>
+                    Clear draft
+                  </button>
+                  <button type="submit" id="submitBtn"
+                          class="inline-flex items-center gap-2 rounded-full bg-nitdaGreen-600 hover:bg-nitdaGreen-700 text-white px-4 py-2.5 text-xs sm:text-sm font-semibold shadow-softStrong">
+                    <span>Submit to Registry</span>
+                    <i class="fa-solid fa-arrow-right-long text-[11px]"></i>
+                  </button>
+                </div>
+              </div>
+
+              <p class="text-[11px] text-nitdaGray-500 mt-1">
+                Drafts are stored for this session only and expire automatically.
+              </p>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <!-- Submitting overlay -->
+      <div id="submittingState" class="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-40 hidden">
+        <div class="glass-card rounded-3xl border border-nitdaGreen-100 px-6 py-5 shadow-softStrong max-w-sm w-full mx-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-nitdaGreen-50 flex items-center justify-center border border-nitdaGreen-100">
+              <svg class="animate-spin h-4 w-4 text-nitdaGreen-700" xmlns="http://www.w3.org/2000/svg" fill="none"
+                   viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-nitdaGray-900">Submitting to Registry…</p>
+              <p class="text-xs text-nitdaGray-500 mt-1">Please do not close this tab while we log your document.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acknowledgement section -->
+      <section id="ackSection" class="hidden mt-8">
+        <div class="slip-bg rounded-4xl border border-nitdaGreen-200/80 shadow-softStrong px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7 bg-white/90">
+          <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-5">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-nitdaGreen-700 flex items-center justify-center text-white">
+                <i class="fa-solid fa-file-circle-check"></i>
+              </div>
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-nitdaGreen-700">Acknowledgement slip</p>
+                <h2 class="text-lg sm:text-xl font-semibold text-nitdaGray-900 mt-1">
+                  Document successfully logged with NITDA Registry
+                </h2>
+              </div>
+            </div>
+            <div class="flex flex-col items-end gap-1">
+              <p class="text-[11px] text-nitdaGray-500">Submission reference</p>
+              <p id="ackRef" class="text-xs sm:text-sm font-mono font-semibold text-nitdaGreen-800 bg-nitdaGreen-50 border border-nitdaGreen-200 rounded-full px-3 py-1">–</p>
+              <p id="ackTimestamp" class="text-[11px] text-nitdaGray-500 mt-1"></p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs text-nitdaGray-700 mb-4">
+            <div class="space-y-1.5">
+              <p class="font-semibold text-nitdaGray-800">Document summary</p>
+              <p><span class="text-nitdaGray-500">Subject:</span> <span id="ackSubject" class="font-medium"></span></p>
+              <p><span class="text-nitdaGray-500">Origin:</span> <span id="ackOrigin"></span></p>
+              <p><span class="text-nitdaGray-500">Type:</span> <span id="ackType"></span></p>
+            </div>
+            <div class="space-y-1.5">
+              <p class="font-semibold text-nitdaGray-800">Registry metadata</p>
+              <p><span class="text-nitdaGray-500">Priority:</span> <span id="ackPriority"></span></p>
+              <p><span class="text-nitdaGray-500">Channel:</span> <span id="ackChannel"></span></p>
+              <p><span class="text-nitdaGray-500">Date received:</span> <span id="ackDate"></span></p>
+            </div>
+            <div class="space-y-1.5">
+              <p class="font-semibold text-nitdaGray-800">Attachments</p>
+              <p><span class="text-nitdaGray-500">File count:</span> <span id="ackFileCount"></span></p>
+              <p><span class="text-nitdaGray-500">Total size:</span> <span id="ackFileSize"></span></p>
+              <p class="text-[11px] text-nitdaGray-500 mt-1">
+                This reference should be quoted in all follow-up communications with the registry.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-dashed border-nitdaGray-300/80">
+            <div class="text-[11px] text-nitdaGray-500 flex items-center gap-2">
+              <i class="fa-regular fa-circle-check text-nitdaGreen-700 text-xs"></i>
+              <span>This slip is generated electronically and does not require a physical signature.</span>
+            </div>
+            <div class="flex items-center gap-2 justify-end">
+              <button id="printSlipBtn" type="button"
+                      class="inline-flex items-center gap-1.5 rounded-full border border-nitdaGray-200 bg-white px-3 py-2 text-[11px] font-medium text-nitdaGray-700 hover:bg-nitdaGray-50">
+                <i class="fa-solid fa-print text-[10px]"></i>
+                Print / save as PDF
+              </button>
+              <button id="newSubmissionBtn" type="button"
+                      class="inline-flex items-center gap-1.5 rounded-full bg-nitdaGreen-600 hover:bg-nitdaGreen-700 text-white px-3.5 py-2 text-[11px] font-semibold shadow-soft">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                New submission
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      /*
+        POWER AUTOMATE CONFIG
+        - Paste your HTTP-trigger URL here.
+        - Your flow should accept multipart/form-data (preferred for files).
+        - Recommended output JSON:
+            { "reference": "NITDA/DGS-REG/20251213/...", "timestamp": "2025-12-13T..." }
+      */
+      const FLOW_URL = "PASTE_YOUR_POWER_AUTOMATE_HTTP_TRIGGER_URL_HERE";
+
+      // Draft storage policy (safer for shared PCs)
+      const DRAFT_KEY = "nitda_registry_draft_v2";
+      const DRAFT_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+
+      const form = document.getElementById('submissionForm');
+      const fileDrop = document.getElementById('fileDrop');
+      const fileInput = document.getElementById('fileInput');
+      const fileListWrapper = document.getElementById('fileListWrapper');
+      const fileList = document.getElementById('fileList');
+
+      const previewSubject = document.getElementById('previewSubject');
+      const previewOrigin = document.getElementById('previewOrigin');
+      const previewTypeChannel = document.getElementById('previewTypeChannel');
+      const previewPriority = document.getElementById('previewPriority');
+      const previewFiles = document.getElementById('previewFiles');
+      const previewStatus = document.getElementById('previewStatus');
+
+      const statusToast = document.getElementById('statusToast');
+      const statusIcon = document.getElementById('statusIcon');
+      const statusTitle = document.getElementById('statusTitle');
+      const statusMessage = document.getElementById('statusMessage');
+      const statusClose = document.getElementById('statusClose');
+      const ariaLive = document.getElementById('ariaLive');
+
+      const submittingState = document.getElementById('submittingState');
+      const formSection = document.getElementById('formSection');
+      const ackSection = document.getElementById('ackSection');
+
+      const ackRef = document.getElementById('ackRef');
+      const ackTimestamp = document.getElementById('ackTimestamp');
+      const ackSubject = document.getElementById('ackSubject');
+      const ackOrigin = document.getElementById('ackOrigin');
+      const ackType = document.getElementById('ackType');
+      const ackPriority = document.getElementById('ackPriority');
+      const ackChannel = document.getElementById('ackChannel');
+      const ackDate = document.getElementById('ackDate');
+      const ackFileCount = document.getElementById('ackFileCount');
+      const ackFileSize = document.getElementById('ackFileSize');
+
+      const saveDraftBtn = document.getElementById('saveDraftBtn');
+      const clearDraftBtn = document.getElementById('clearDraftBtn');
+      const printSlipBtn = document.getElementById('printSlipBtn');
+      const newSubmissionBtn = document.getElementById('newSubmissionBtn');
+      const currentDateLabel = document.getElementById('currentDateLabel');
+      const submitBtn = document.getElementById('submitBtn');
+
+      let selectedFiles = [];
+
+      // File constraints
+      const MAX_FILES = 10;
+      const MAX_BYTES_PER_FILE = 25 * 1024 * 1024; // 25 MB
+      const ALLOWED_MIME = new Set([
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg',
+        'image/png'
+      ]);
+
+      // Utility: human-readable size
+      function formatBytes(bytes) {
+        if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        const value = bytes / Math.pow(1024, i);
+        return value.toFixed(value >= 10 || i === 0 ? 0 : 1) + ' ' + sizes[i];
+      }
+
+      function announce(text) {
+        ariaLive.textContent = '';
+        setTimeout(() => { ariaLive.textContent = text; }, 30);
+      }
+
+      // Toast
+      function showStatusToast(title, message, type) {
+        statusTitle.textContent = title;
+        statusMessage.textContent = message;
+
+        if (type === 'success') {
+          statusIcon.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i>';
+        } else if (type === 'error') {
+          statusIcon.innerHTML = '<i class="fa-solid fa-circle-xmark text-red-500"></i>';
+        } else {
+          statusIcon.innerHTML = '<i class="fa-solid fa-circle-info text-sky-500"></i>';
+        }
+
+        statusToast.classList.remove('hidden');
+        announce(`${title}. ${message}`);
+
+        setTimeout(() => {
+          statusToast.classList.add('hidden');
+        }, 4500);
+      }
+
+      statusClose.addEventListener('click', () => statusToast.classList.add('hidden'));
+
+      // Current date label
+      function setCurrentDateLabel() {
+        const now = new Date();
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        currentDateLabel.textContent = now.toLocaleDateString(undefined, options);
+      }
+      setCurrentDateLabel();
+
+      // Preview updating
+      function updatePreview() {
+        const registryType = document.getElementById('registryType').value;
+        const originatingMDA = document.getElementById('originatingMDA').value;
+        const subject = document.getElementById('subject').value;
+        const channel = document.getElementById('channel').value;
+        const priority = document.getElementById('priority').value;
+
+        previewSubject.textContent = subject || '–';
+        previewOrigin.textContent = originatingMDA || '–';
+
+        const typeLabel = registryType ? registryType.replaceAll('-', ' ') : '–';
+        const channelLabel = channel || '–';
+        previewTypeChannel.textContent = typeLabel + ' / ' + channelLabel;
+
+        previewPriority.textContent = priority || '–';
+
+        if (selectedFiles.length) {
+          previewFiles.textContent = selectedFiles.map(f => f.name).join(', ');
+        } else {
+          previewFiles.textContent = 'No files selected';
+        }
+
+        const hasInput = subject || originatingMDA || registryType || channel || priority || selectedFiles.length;
+        if (hasInput) {
+          previewStatus.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Updated';
+          previewStatus.classList.remove('bg-nitdaGray-100', 'text-nitdaGray-600');
+          previewStatus.classList.add('bg-nitdaGreen-50', 'text-nitdaGreen-700');
+        } else {
+          previewStatus.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-nitdaGray-400"></span> Waiting for input';
+          previewStatus.classList.add('bg-nitdaGray-100', 'text-nitdaGray-600');
+          previewStatus.classList.remove('bg-nitdaGreen-50', 'text-nitdaGreen-700');
+        }
+      }
+
+      form.addEventListener('input', updatePreview);
+
+      // Files management
+      function renderFileList() {
+        fileList.innerHTML = '';
+
+        if (!selectedFiles.length) {
+          fileListWrapper.classList.add('hidden');
+          updatePreview();
+          return;
+        }
+
+        fileListWrapper.classList.remove('hidden');
+
+        selectedFiles.forEach((file, index) => {
+          const li = document.createElement('li');
+          li.className = 'flex items-center justify-between gap-2 bg-white/80 rounded-2xl border border-nitdaGray-200 px-3 py-2';
+
+          const left = document.createElement('div');
+          left.className = 'flex items-center gap-2';
+          left.innerHTML = `
+            <span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-nitdaGreen-50 text-nitdaGreen-700 border border-nitdaGreen-100">
+              <i class="fa-regular fa-file-lines text-xs"></i>
+            </span>
+            <div class="text-[11px]">
+              <p class="font-medium text-nitdaGray-800 truncate max-w-[150px] sm:max-w-[220px]" title="${file.name}">
+                ${file.name}
+              </p>
+              <p class="text-nitdaGray-500">${formatBytes(file.size)}</p>
+            </div>
+          `;
+
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'text-[11px] text-red-500 hover:text-red-600 flex items-center gap-1';
+          removeBtn.innerHTML = '<i class="fa-solid fa-xmark text-[10px]"></i><span>Remove</span>';
+          removeBtn.addEventListener('click', () => {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+          });
+
+          li.appendChild(left);
+          li.appendChild(removeBtn);
+          fileList.appendChild(li);
+        });
+
+        updatePreview();
+      }
+
+      function validateIncomingFiles(fileListLike) {
+        const incoming = Array.from(fileListLike || []);
+        if (!incoming.length) return { ok: true, files: [] };
+
+        if (selectedFiles.length + incoming.length > MAX_FILES) {
+          return { ok: false, message: `You can attach a maximum of ${MAX_FILES} files per submission.` };
+        }
+
+        for (const f of incoming) {
+          if (f.size > MAX_BYTES_PER_FILE) {
+            return { ok: false, message: `${f.name} exceeds 25 MB.` };
+          }
+          // MIME check (best-effort; server must still enforce)
+          if (f.type && !ALLOWED_MIME.has(f.type)) {
+            return { ok: false, message: `${f.name} is not an accepted file type.` };
+          }
+        }
+
+        return { ok: true, files: incoming };
+      }
+
+      function handleFiles(files) {
+        const res = validateIncomingFiles(files);
+        if (!res.ok) {
+          showStatusToast('Upload rejected', res.message, 'error');
+          return;
+        }
+        selectedFiles = selectedFiles.concat(res.files);
+        renderFileList();
+      }
+
+      fileDrop.addEventListener('click', () => fileInput.click());
+      fileDrop.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          fileInput.click();
+        }
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length) handleFiles(e.target.files);
+        // reset input so re-selecting the same file still triggers change
+        e.target.value = '';
+      });
+
+      fileDrop.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileDrop.classList.add('dragover');
+      });
+
+      fileDrop.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileDrop.classList.remove('dragover');
+      });
+
+      fileDrop.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileDrop.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files.length) {
+          handleFiles(e.dataTransfer.files);
+        }
+      });
+
+      // Draft (sessionStorage with expiry)
+      function collectFormDataForDraft() {
+        const formData = new FormData(form);
+        const data = {};
+        for (const [key, value] of formData.entries()) data[key] = value;
+
+        // Files cannot be restored; store only “preview”
+        data.filesPreview = selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }));
+        data._savedAt = Date.now();
+        return data;
+      }
+
+      function saveDraft() {
+        try {
+          const data = collectFormDataForDraft();
+          sessionStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+          showStatusToast('Draft saved', 'Stored for this session only (expires automatically).', 'success');
+        } catch (err) {
+          showStatusToast('Unable to save', 'Your browser does not allow storage for this page.', 'error');
+        }
+      }
+
+      function clearDraft() {
+        try {
+          sessionStorage.removeItem(DRAFT_KEY);
+          showStatusToast('Draft cleared', 'Saved draft removed from this session.', 'info');
+        } catch (err) {
+          showStatusToast('Unable to clear', 'Your browser does not allow storage for this page.', 'error');
+        }
+      }
+
+      saveDraftBtn.addEventListener('click', saveDraft);
+      clearDraftBtn.addEventListener('click', clearDraft);
+
+      function restoreDraft() {
+        try {
+          const raw = sessionStorage.getItem(DRAFT_KEY);
+          if (!raw) return;
+
+          const data = JSON.parse(raw);
+          const savedAt = Number(data._savedAt || 0);
+          if (!savedAt || (Date.now() - savedAt) > DRAFT_TTL_MS) {
+            sessionStorage.removeItem(DRAFT_KEY);
+            return;
+          }
+
+          Object.keys(data).forEach((key) => {
+            if (key === 'filesPreview' || key === '_savedAt') return;
+            const field = form.elements.namedItem(key);
+            if (field && typeof field.value !== 'undefined') {
+              field.value = data[key];
+            }
+          });
+
+          if (Array.isArray(data.filesPreview) && data.filesPreview.length) {
+            previewFiles.textContent = data.filesPreview.map(f => f.name).join(', ');
+          }
+
+          updatePreview();
+          showStatusToast('Draft restored', 'Draft fields restored for this session.', 'info');
+        } catch (err) {
+          // ignore
+        }
+      }
+      restoreDraft();
+
+      // Submission: send multipart/form-data to Power Automate
+      function buildSubmissionFormData() {
+        const fd = new FormData(form);
+
+        // Attach files under a consistent key (files[])
+        selectedFiles.forEach((f) => fd.append('files[]', f, f.name));
+
+        // Optionally include a client submission id for traceability (server should generate canonical reference)
+        fd.append('clientSubmissionId', crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()));
+
+        return fd;
+      }
+
+      function localFallbackReference() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const timePart = String(now.getHours()).padStart(2, '0') +
+                         String(now.getMinutes()).padStart(2, '0') +
+                         String(now.getSeconds()).padStart(2, '0');
+        return `NITDA/DGS-REG/${year}${month}${day}/${timePart}`;
+      }
+
+      async function submitToPowerAutomate() {
+        if (!FLOW_URL || FLOW_URL.includes("PASTE_YOUR_POWER_AUTOMATE")) {
+          showStatusToast('Configuration required', 'Insert your Power Automate HTTP trigger URL into FLOW_URL.', 'error');
+          return null;
+        }
+
+        const fd = buildSubmissionFormData();
+
+        const res = await fetch(FLOW_URL, {
+          method: 'POST',
+          body: fd
+          // Do NOT set Content-Type manually for FormData
+        });
+
+        // Some flows return plain text; handle both
+        const contentType = res.headers.get('content-type') || '';
+        let payload = null;
+
+        if (contentType.includes('application/json')) {
+          payload = await res.json();
+        } else {
+          const text = await res.text();
+          try { payload = JSON.parse(text); } catch { payload = { raw: text }; }
+        }
+
+        if (!res.ok) {
+          const msg = payload?.message || payload?.error || payload?.raw || `HTTP ${res.status}`;
+          throw new Error(msg);
+        }
+
+        return payload;
+      }
+
+      function populateAcknowledgement(payload) {
+        const subject = document.getElementById('subject').value;
+        const originatingMDA = document.getElementById('originatingMDA').value;
+        const registryTypeText = document.getElementById('registryType').options[document.getElementById('registryType').selectedIndex].text || '–';
+        const priorityText = document.getElementById('priority').options[document.getElementById('priority').selectedIndex].text || '–';
+        const channelText = document.getElementById('channel').options[document.getElementById('channel').selectedIndex].text || '–';
+        const dateReceived = document.getElementById('dateReceived').value || '–';
+
+        const ref = payload?.reference || payload?.ref || localFallbackReference();
+        ackRef.textContent = ref;
+
+        const now = new Date();
+        const tsOptions = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        const serverTs = payload?.timestamp || payload?.createdAt || null;
+        ackTimestamp.textContent = serverTs
+          ? ('Generated on ' + new Date(serverTs).toLocaleString(undefined, tsOptions))
+          : ('Generated on ' + now.toLocaleString(undefined, tsOptions));
+
+        ackSubject.textContent = subject;
+        ackOrigin.textContent = originatingMDA;
+        ackType.textContent = registryTypeText;
+        ackPriority.textContent = priorityText;
+        ackChannel.textContent = channelText;
+        ackDate.textContent = dateReceived;
+
+        const totalSize = selectedFiles.reduce((sum, f) => sum + (f.size || 0), 0);
+        ackFileCount.textContent = String(selectedFiles.length);
+        ackFileSize.textContent = formatBytes(totalSize);
+      }
+
+      function setSubmitting(isSubmitting) {
+        if (isSubmitting) {
+          submittingState.classList.remove('hidden');
+          submitBtn.setAttribute('disabled', 'disabled');
+          submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+        } else {
+          submittingState.classList.add('hidden');
+          submitBtn.removeAttribute('disabled');
+          submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        }
+      }
+
+      // Submit handler
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Client-side validation
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+
+        if (selectedFiles.length === 0) {
+          showStatusToast('No files attached', 'Attach at least one document before submitting.', 'error');
+          return;
+        }
+
+        // Re-validate file constraints before upload
+        const recheck = validateIncomingFiles([]);
+        if (!recheck.ok) {
+          showStatusToast('Upload rejected', recheck.message, 'error');
+          return;
+        }
+
+        setSubmitting(true);
+
+        try {
+          const payload = await submitToPowerAutomate();
+
+          // Clear draft on success
+          try { sessionStorage.removeItem(DRAFT_KEY); } catch (err) {}
+
+          populateAcknowledgement(payload || {});
+          formSection.classList.add('hidden');
+          ackSection.classList.remove('hidden');
+
+          showStatusToast('Submission successful', 'Your document has been logged with the NITDA Registry.', 'success');
+        } catch (err) {
+          showStatusToast('Submission failed', err?.message || 'Unable to submit. Please try again.', 'error');
+        } finally {
+          setSubmitting(false);
+        }
+      });
+
+      printSlipBtn.addEventListener('click', () => window.print());
+
+      newSubmissionBtn.addEventListener('click', () => {
+        form.reset();
+        selectedFiles = [];
+        renderFileList();
+        updatePreview();
+        ackSection.classList.add('hidden');
+        formSection.classList.remove('hidden');
+        showStatusToast('Ready', 'You can now log a new document.', 'info');
+      });
+
+      // Initial preview
+      updatePreview();
+    })();
+  </script>
+</body>
+</html>

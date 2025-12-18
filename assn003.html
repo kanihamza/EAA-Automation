@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DGCEO Digital OPS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --brand-primary: #008751;
+      --brand-primary-soft: #e1f6eb;
+      --brand-secondary: #00a69d;
+      --danger: #9f1d1d;
+      --accent-orange: #e96300;
+      --bg-main: #f4f7f5;
+      --bg-card: #ffffff;
+      --bg-card-soft: #edf8f2;
+      --border-soft: #c7e2d5;
+      --text-main: #024029;
+      --text-muted: #7a7a7a;
+      --radius-lg: 12px;
+      --radius-md: 8px;
+      --radius-pill: 999px;
+      --shadow-soft: 0 2px 8px rgba(0,0,0,0.06);
+      --font: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--bg-main);
+      color: var(--text-main);
+    }
+
+    .shell {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: radial-gradient(circle at top left, #f3faf6, #f4f7f5 55%, #e9f3ed 100%);
+    }
+
+    .shell-header {
+      background: var(--brand-primary);
+      color: #fff;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .shell-header-left { display: flex; gap: 10px; align-items: center; }
+    .logo-pill {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: #fff;
+      color: var(--brand-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+    }
+    .shell-header-right { display: flex; gap: 10px; flex-wrap: wrap; }
+    .tag {
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(255,255,255,0.55);
+      font-size: 11px;
+    }
+
+    .screen {
+      display: none;
+      padding: 10px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .screen.active { display: block; }
+
+    /**********************
+     * ACTIVITIES SCREEN
+     **********************/
+    .activities-header-row {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    @media(max-width: 800px) {
+      .activities-header-row { grid-template-columns: 1fr; }
+    }
+
+    .nav-chip {
+      background: #fff;
+      border: 2px solid var(--brand-primary);
+      border-radius: 18px;
+      padding: 8px 10px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+    }
+    .nav-chip span.emoji { font-size: 18px; }
+
+    .activities-seg {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: #fff;
+      border: 2px solid var(--brand-primary);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .seg-btn {
+      border: none;
+      padding: 10px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      border-right: 1px solid #c7e2d5;
+      white-space: nowrap;
+    }
+    .seg-btn:last-child { border-right: none; }
+    .seg-btn.active { background: var(--brand-primary); color: #fff; }
+
+    .search-input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 18px;
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      outline: none;
+      font-size: 13px;
+    }
+
+    .activities-body {
+      display: grid;
+      grid-template-columns: 2fr 1.3fr;
+      gap: 12px;
+    }
+    @media(max-width: 1000px) {
+      .activities-body { grid-template-columns: 1fr; }
+    }
+
+    .list-scroll { max-height: calc(100vh - 200px); overflow-y: auto; }
+
+    .activity-card {
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      padding: 10px;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr 120px;
+      box-shadow: var(--shadow-soft);
+      margin-bottom: 10px;
+    }
+    @media(max-width: 600px) {
+      .activity-card { grid-template-columns: 1fr; }
+    }
+
+    .activity-title { font-weight: 700; font-size: 13px; }
+    .activity-meta-card {
+      background: #f7f9fa;
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid #e0e4e8;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+    }
+
+    .activity-status-tag {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #f0f2f5;
+    }
+    .activity-status-tag.treated {
+      background: #e3f7eb;
+      color: #0a6e36;
+    }
+
+    .btn-pill {
+      border-radius: 6px;
+      padding: 7px 4px;
+      border: none;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 3px;
+      width: 100%;
+    }
+    .btn-pill.btn-green { background: var(--brand-primary); color: #fff; }
+    .btn-pill.btn-dark { background: #111827; color: #fff; }
+    .btn-pill.btn-orange { background: var(--accent-orange); color: #fff; }
+    .btn-pill.btn-outline {
+      background: #fff;
+      color: var(--brand-primary);
+      border: 2px solid var(--brand-primary);
+    }
+
+    .details-pane {
+      background: #e6f7f9;
+      border: 1px solid #00a69d;
+      border-radius: var(--radius-lg);
+      padding: 10px;
+      max-height: calc(100vh - 200px);
+      overflow-y: auto;
+    }
+    @media(max-width: 1000px) {
+      .details-pane {
+        position: fixed;
+        inset: 60px 10px 10px 10px;
+        display: none;
+        z-index: 999;
+        max-height: unset;
+      }
+      .details-pane.mobile-visible { display: block; }
+    }
+
+    /**********************
+     * TOOLBAR
+     **********************/
+    .screen-toolbar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    @media(max-width: 600px) {
+      .screen-toolbar { grid-template-columns: 1fr; }
+    }
+
+    .toolbar-btn {
+      padding: 10px;
+      border: none;
+      border-radius: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .toolbar-btn { background: var(--brand-primary); color: #fff; }
+    .toolbar-btn.secondary { background: #fff; color: var(--brand-primary); border: 1px solid #c7e2d5; }
+    .toolbar-btn.destructive { background: var(--danger); }
+
+    /**********************
+     * ASSIGNMENT + CATEGORY
+     **********************/
+    .assignment-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      height: calc(100vh - 200px);
+    }
+    @media(max-width: 900px) {
+      .assignment-layout { grid-template-columns: 1fr; height: auto; }
+    }
+
+    .pane {
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #c7e2d5;
+      padding: 10px;
+      overflow: auto;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .table th {
+      background: var(--brand-primary);
+      color: #fff;
+      padding: 6px;
+      text-align: left;
+    }
+    .table td {
+      padding: 6px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .label-block {
+      background: #cfeedf;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .label-block strong { font-weight: 600; }
+
+    .field-label {
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 4px;
+      margin-bottom: 2px;
+    }
+
+    .select-input {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #c7e2d5;
+      font-size: 12px;
+      margin-bottom: 6px;
+      background: #f9fbfa;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .chip-btn {
+      border-radius: 999px;
+      border: 1px solid var(--brand-primary);
+      background: #fff;
+      padding: 4px 10px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .chip-btn.active {
+      background: var(--brand-primary);
+      color: #fff;
+    }
+
+    .cc-options-list {
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #e0e4e8;
+      border-radius: 6px;
+      padding: 4px;
+      margin-top: 4px;
+      background: #fafafa;
+      font-size: 12px;
+    }
+    .cc-option-item {
+      padding: 4px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 2px;
+    }
+    .cc-option-item:hover {
+      background: #e1f6eb;
+    }
+
+    .cc-selected-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 6px;
+      font-size: 11px;
+    }
+    .cc-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: #e1f6eb;
+      border: 1px solid #c7e2d5;
+    }
+    .cc-chip button {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    /**********************
+     * COMMENTS
+     **********************/
+    .comments-editor {
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #c7e2d5;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 200px);
+      box-shadow: var(--shadow-soft);
+    }
+    .editor-area {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      resize: none;
+    }
+
+    /**********************
+     * OVERLAY DIALOGS
+     **********************/
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    .overlay.visible { display: flex; }
+
+    .dialog {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      width: min(450px, 95%);
+      text-align: center;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+    }
+    .btn-big {
+      padding: 10px 18px;
+      border-radius: 20px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      color: #fff;
+      font-size: 13px;
+    }
+    .btn-big.primary { background: var(--brand-primary); }
+    .btn-big.cancel  { background: var(--danger); }
+
+    .text-muted { font-size: 11px; color: var(--text-muted); }
+  </style>
+</head>
+
+<body>
+<div class="shell">
+  <!-- HEADER -->
+  <header class="shell-header">
+    <div class="shell-header-left">
+      <div class="logo-pill">N</div>
+      <div>
+        <div style="font-weight:600;font-size:14px;">DGCEO Digital OPS</div>
+        <div style="font-size:11px;opacity:0.85;">Power Apps → HTML + Power Automate HTTP</div>
+      </div>
+    </div>
+    <div class="shell-header-right">
+      <div class="tag">User: <strong>DG Office</strong></div>
+      <div class="tag" id="currentScreenTag">Screen: Activities_1</div>
+    </div>
+  </header>
+
+  <!-- ACTIVITIES SCREEN -->
+  <main class="screen active" id="screen-activities">
+    <div class="activities-header-row">
+      <button class="nav-chip" type="button" onclick="navigate('activities')">
+        <span class="emoji">🏠</span>
+        <span>DGCEO Activities Navigation</span>
+      </button>
+
+      <div class="activities-seg">
+        <button id="seg-all" class="seg-btn active" type="button" onclick="setFilter('All')">All</button>
+        <button id="seg-treated" class="seg-btn" type="button" onclick="setFilter('Treated')">Treated</button>
+        <button id="seg-nottreated" class="seg-btn" type="button" onclick="setFilter('NotTreated')">Not Treated</button>
+        <button class="seg-btn" type="button" onclick="toggleFilters()">Show Filters</button>
+      </div>
+
+      <div style="text-align:right;">
+        <div style="background:#e1f6eb;padding:6px 10px;border-radius:8px;font-size:12px;">
+          <strong>Current Screen:</strong> Activities_1 &nbsp;|&nbsp;
+          <strong>User:</strong> DG Office
+        </div>
+      </div>
+    </div>
+
+    <input id="searchBox" class="search-input" placeholder="Search"
+           oninput="onSearchChange(this.value)" />
+
+    <div class="activities-body">
+      <div class="list-scroll" id="activitiesList"></div>
+
+      <aside class="details-pane" id="detailsPane">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h3 id="detailsTitle" style="margin:0;">Details</h3>
+          <button type="button"
+                  style="border:none;background:var(--brand-primary);color:#fff;padding:4px 10px;border-radius:12px;cursor:pointer;"
+                  onclick="toggleDetails(false)">Close</button>
+        </div>
+        <div id="detailsBody"></div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- ASSIGNMENT SCREEN -->
+  <main class="screen" id="screen-assignment">
+    <div class="screen-toolbar">
+      <button class="toolbar-btn secondary" type="button" onclick="navigate('activities')">✖ Cancel</button>
+      <button class="toolbar-btn secondary" type="button" onclick="navigate('category')">✏ Edit Entries</button>
+      <button class="toolbar-btn" type="button" onclick="submitAssignment()">💾 Submit Assignment</button>
+    </div>
+
+    <div class="assignment-layout">
+      <section class="pane">
+        <h3>Status: <span id="assignmentStatusLabel">Awaiting Assignment</span></h3>
+        <table class="table">
+          <thead><tr><th>Field</th><th>Details</th></tr></thead>
+          <tbody id="assignmentTableBody"></tbody>
+        </table>
+      </section>
+
+      <section class="pane">
+        <h3 style="text-align:center;">Activity Notification</h3>
+        <div id="previewEmailBody" style="font-size:13px;line-height:1.4;"></div>
+        <p class="text-muted">HTML body returned by <code>loadPreviewEmail</code> flow.</p>
+      </section>
+    </div>
+  </main>
+
+  <!-- COMMENTS SCREEN -->
+  <main class="screen" id="screen-comments">
+    <div class="screen-toolbar">
+      <button class="toolbar-btn" type="button" onclick="saveComments()">💾 Save Comments</button>
+      <button class="toolbar-btn destructive" type="button" onclick="navigate('category')">✖ Cancel Comments</button>
+      <div></div>
+    </div>
+
+    <div class="comments-editor">
+      <div style="padding:10px;border-bottom:1px solid #ddd;font-size:13px;font-weight:600;">
+        Comments (rich text)
+      </div>
+      <textarea id="commentsBox" class="editor-area"
+                placeholder="Type comments here..."></textarea>
+    </div>
+  </main>
+
+  <!-- CATEGORY / ASSIGNMENT CONFIG SCREEN -->
+  <main class="screen" id="screen-category">
+    <div class="screen-toolbar">
+      <button class="toolbar-btn secondary" type="button" onclick="navigate('activities')">✖ Cancel</button>
+      <button class="toolbar-btn destructive" type="button" onclick="clearAssignmentEntries()">🗑 Clear Entries</button>
+      <button class="toolbar-btn" type="button" onclick="navigate('comments')">💬 Add/Edit Comments</button>
+    </div>
+
+    <div class="assignment-layout">
+      <!-- LEFT: Controls / Combos (mirroring Power Apps) -->
+      <section class="pane">
+        <h3>Assignment Controls</h3>
+
+        <!-- Category / Subcategory (Two-level) -->
+        <div>
+          <div class="field-label">Category</div>
+          <select id="categorySelect" class="select-input" onchange="onCategoryChange(this.value)">
+            <option value="">Select Category</option>
+          </select>
+
+          <div class="field-label">Subcategory</div>
+          <select id="subcategorySelect" class="select-input" onchange="onSubcategoryChange(this.value)">
+            <option value="">Select Subcategory</option>
+          </select>
+          <p class="text-muted" id="categoryHint">
+            Category/Subcategory drives DSU assignment, CC and priority (mirrors Power Apps).
+          </p>
+        </div>
+
+        <!-- Auto-filled labels -->
+        <div class="label-block">
+          AssignedTo:<br/>
+          <strong id="assignedToLabel">()</strong>
+        </div>
+        <div class="label-block">
+          Co-AssignedTo:<br/>
+          <strong id="coAssignedToLabel">()</strong>
+        </div>
+        <div class="label-block">
+          CcTo:<br/>
+          <strong id="copyToLabel">()</strong>
+        </div>
+
+        <!-- User selection for AssignedTo / CoAssignedTo -->
+        <div class="field-label">Override AssignedTo (DSU Head)</div>
+        <select id="assignedToSelect" class="select-input" onchange="onAssignedToOverride(this.value)">
+          <option value="">(use default)</option>
+        </select>
+
+        <div class="field-label">Override Co-AssignedTo (DSU Head)</div>
+        <select id="coAssignedToSelect" class="select-input" onchange="onCoAssignedToOverride(this.value)">
+          <option value="">(use default)</option>
+        </select>
+
+        <!-- CCTo multi-select -->
+        <div class="field-label">CCTo (multi-select from DSU Heads)</div>
+        <input id="ccSearchBox" class="search-input"
+               placeholder="Search DSU Heads by name/email/title..."
+               oninput="searchCCOptions(this.value)" />
+        <div id="ccOptionsList" class="cc-options-list"></div>
+        <div id="ccSelectedChips" class="cc-selected-chips"></div>
+
+        <!-- Priority (from Category + override) -->
+        <div class="label-block" id="priorityBox">
+          Priority: (<span id="priorityValueLabel">Medium</span>)
+        </div>
+        <div class="field-label">Override Priority</div>
+        <div class="chip-row">
+          <button type="button" class="chip-btn" onclick="setPriority('P1 (High)')">P1 (High)</button>
+          <button type="button" class="chip-btn" onclick="setPriority('P2 (Medium)')">P2 (Medium)</button>
+          <button type="button" class="chip-btn" onclick="setPriority('P3 (Normal)')">P3 (Normal)</button>
+          <button type="button" class="chip-btn" onclick="setPriority('P4 (Low)')">P4 (Low)</button>
+        </div>
+
+        <!-- Action Required -->
+        <div class="label-block" id="actionRequiredBox">
+          Action Required: (<span id="actionRequiredValueLabel"></span>)
+        </div>
+        <div class="field-label">Action Required</div>
+        <div class="chip-row">
+          <button class="chip-btn" type="button" onclick="setActionRequired('Review')">Review</button>
+          <button class="chip-btn" type="button" onclick="setActionRequired('Approval')">Approval</button>
+          <button class="chip-btn" type="button" onclick="setActionRequired('Information')">Information</button>
+        </div>
+
+        <p class="text-muted" style="margin-top:8px;">
+          All values above are persisted into the assignment payload (equivalent to Power Apps <code>selectedValues</code> context).
+        </p>
+      </section>
+
+      <!-- RIGHT: Preview -->
+      <section class="pane">
+        <h3>Preview – Assignment Details</h3>
+        <table class="table">
+          <thead>
+          <tr><th>Field</th><th>Details</th></tr>
+          </thead>
+          <tbody id="categoryPreviewBody"></tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- OVERLAYS -->
+<div class="overlay" id="dialogNYSC">
+  <div class="dialog">
+    <h3>NYSC – Confirm Action</h3>
+    <p>No details available.</p>
+    <div style="display:flex;justify-content:center;gap:20px;">
+      <button class="btn-big primary" type="button" onclick="confirmSpecial('NYSC')">Confirm</button>
+      <button class="btn-big cancel"  type="button" onclick="closeOverlay()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialogSIWES">
+  <div class="dialog">
+    <h3>SIWES – Confirm Action</h3>
+    <p>No details available.</p>
+    <div style="display:flex;justify-content:center;gap:20px;">
+      <button class="btn-big primary" type="button" onclick="confirmSpecial('SIWES')">Confirm</button>
+      <button class="btn-big cancel"  type="button" onclick="closeOverlay()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialogArchive">
+  <div class="dialog">
+    <h3>Archive – Confirm Action</h3>
+    <p>No details available.</p>
+    <div style="display:flex;justify-content:center;gap:20px;">
+      <button class="btn-big primary" type="button" onclick="confirmSpecial('Archive')">Confirm</button>
+      <button class="btn-big cancel"  type="button" onclick="closeOverlay()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPT -->
+<script>
+  /***********************************************
+   * FLOW ENDPOINTS – ONLY THESE 6 ARE USED
+   ***********************************************/
+  const FLOW_ENDPOINTS = {
+    loadActivities: "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/c7dd6a359ac9415cadb9cefa30f026e5/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2_BepspLQ2Td_O1WK6wjke7wwzYVwRhBU-cKOP4DS1E",
+    loadActivityDetails: "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/32555f9761ac40e0b4cc8d3695dcd6f1/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=anvvWJVfTTkStE2yOB8bKhNn5irgSiCP71EPpG418AY",
+    updateAssignment: "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/af33600fafc8435db96a304545b0825c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mAb3Uf8-GFHPzAJdzWudx7zxyQhVlbidN_MPyNeVNM4",
+    updateSpecial: "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/af33600fafc8435db96a304545b0825c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mAb3Uf8-GFHPzAJdzWudx7zxyQhVlbidN_MPyNeVNM4",
+    saveComments: "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/af33600fafc8435db96a304545b0825c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mAb3Uf8-GFHPzAJdzWudx7zxyQhVlbidN_MPyNeVNM4",
+    loadPreviewEmail: "https://defaultca6a4b3f912349bcbcb927085ebbf1.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/af33600fafc8435db96a304545b0825c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mAb3Uf8-GFHPzAJdzWudx7zxyQhVlbidN_MPyNeVNM4"
+  };
+
+  /***********************************************
+   * GLOBAL STATE (aligned with Power Apps)
+   ***********************************************/
+  const state = {
+    activities: [],
+    DGOselected: null,
+    screen: "activities",
+    filter: "All",
+    search: "",
+    // reference tables (from JSON files)
+    categoriesMaster: [],
+    departmentsInfo: [],
+    // assignment / category context
+    assignmentMeta: null,     // holds selected row from categories master + derived values
+    assignmentType: null,
+    commentsDraft: "",
+    selectedActionRequired: "",
+    priority: "Medium",
+    selectedCategory: "",
+    selectedSubcategory: "",
+    selectedAssignedTo: "",
+    selectedCoAssignedTo: "",
+    selectedCcEmails: []      // array of email strings (distinct)
+  };
+
+  /***********************************************
+   * HELPER: CALL FLOW
+   ***********************************************/
+  async function callFlow(name, body = null, methodOverride = null) {
+    const url = FLOW_ENDPOINTS[name];
+    if (!url || url.startsWith("<FLOW_URL")) {
+      console.warn("Flow URL not configured for:", name);
+      return null;
+    }
+    const method = methodOverride || (body ? "POST" : "GET");
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: body ? JSON.stringify(body) : null
+    });
+    if (!res.ok) {
+      console.error("Flow failed", name, res.status);
+      alert("Flow call failed: " + name);
+      return null;
+    }
+    try { return await res.json(); } catch { return null; }
+  }
+
+  /***********************************************
+   * NAVIGATION
+   ***********************************************/
+  function navigate(screen, extra = {}) {
+    state.screen = screen;
+    if (extra.assignmentType) state.assignmentType = extra.assignmentType;
+
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById("screen-" + screen).classList.add("active");
+
+    const screenNames = {
+      activities: "Activities_1",
+      assignment: "Activity_Assignments",
+      comments: "Comments",
+      category: "Assignments_Category"
+    };
+    document.getElementById("currentScreenTag").textContent =
+      "Screen: " + (screenNames[screen] || screen);
+
+    if (screen === "assignment") buildAssignmentTables();
+    if (screen === "category") {
+      initCategoryDropdowns();
+      syncUserSelectorsUI();
+      buildCategoryPreview();
+    }
+    if (screen === "comments") {
+      document.getElementById("commentsBox").value = state.commentsDraft;
+    }
+  }
+
+  /***********************************************
+   * ACTIVITIES – FILTER / SEARCH / RENDER
+   ***********************************************/
+  function setFilter(filterName) {
+    state.filter = filterName;
+    ["all","treated","nottreated"].forEach(id => {
+      const btn = document.getElementById("seg-" + id);
+      if (btn) btn.classList.remove("active");
+    });
+    if (filterName === "All") document.getElementById("seg-all").classList.add("active");
+    if (filterName === "Treated") document.getElementById("seg-treated").classList.add("active");
+    if (filterName === "NotTreated") document.getElementById("seg-nottreated").classList.add("active");
+    renderActivities();
+  }
+
+  function toggleFilters() {
+    alert("Filter UI placeholder – extend to match your additional Power Apps filters.");
+  }
+
+  function onSearchChange(value) {
+    state.search = (value || "").toLowerCase();
+    renderActivities();
+  }
+
+  function activityMatchesFilters(a) {
+    if (state.search) {
+      const text = (a.title + " " + (a.category || "")).toLowerCase();
+      if (!text.includes(state.search)) return false;
+    }
+    if (state.filter === "Treated" && a.status !== "Treated") return false;
+    if (state.filter === "NotTreated" && a.status === "Treated") return false;
+    return true;
+  }
+
+  function buildActionButtonsHtml(a) {
+    const actions = a.actions || [];
+    return actions.map(name => {
+      let cls = "btn-pill btn-green";
+      if (["NYSC","SIWES","ReNewAssign","ReNewAssign2","NewAssign","NewAssign2","ReAssign"].includes(name))
+        cls = "btn-pill btn-dark";
+      if (name === "Archive") cls = "btn-pill btn-orange";
+      if (name === "PDF" || name === "View") cls = "btn-pill btn-outline";
+      return `<button class="${cls}" type="button" onclick="handleAction('${name}', ${a.id})">${name}</button>`;
+    }).join("");
+  }
+
+  function renderActivities() {
+    const container = document.getElementById("activitiesList");
+    container.innerHTML = "";
+    const acts = state.activities.filter(activityMatchesFilters);
+    if (!acts.length) {
+      container.innerHTML = "<p class='text-muted'>No activities found.</p>";
+      return;
+    }
+    for (const a of acts) {
+      const card = document.createElement("div");
+      card.className = "activity-card";
+      const statusClass = a.status === "Treated" ? "treated" : "";
+      card.innerHTML = `
+        <div onclick="openDetailsById(${a.id})">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;">
+            <div class="activity-title">${a.title}</div>
+            <span class="activity-status-tag ${statusClass}">${a.status || "NotTreated"}</span>
+          </div>
+          <div class="activity-meta-card">
+            <span>${a.date}</span>
+            <span>${a.category || "Uncategorized"}</span>
+          </div>
+        </div>
+        <div>${buildActionButtonsHtml(a)}</div>
+      `;
+      container.appendChild(card);
+    }
+  }
+
+  /***********************************************
+   * DETAILS PANE
+   ***********************************************/
+  function toggleDetails(show) {
+    const pane = document.getElementById("detailsPane");
+    if (window.innerWidth <= 1000) {
+      pane.classList.toggle("mobile-visible", !!show);
+    } else {
+      pane.style.display = show ? "block" : "none";
+    }
+  }
+
+  async function openDetailsById(id) {
+    const base = state.activities.find(x => x.id === id);
+    state.DGOselected = base || null;
+    if (!base) return;
+    toggleDetails(true);
+    renderDetails(base);
+
+    const extra = await callFlow("loadActivityDetails", { activityId: id });
+    if (extra) {
+      const merged = Object.assign({}, base, extra);
+      state.DGOselected = merged;
+      renderDetails(merged);
+    }
+  }
+
+  function renderDetails(a) {
+    document.getElementById("detailsTitle").textContent = a.title || "Details";
+    const body = document.getElementById("detailsBody");
+    const attachments = a.attachments || [];
+    const attachmentsHtml = attachments.length
+      ? attachments.map(att => `<a href="${att.url}" target="_blank" rel="noopener" style="display:block;font-size:12px;">${att.name}</a>`).join("")
+      : "<span class='text-muted'>No attachments.</span>";
+
+    body.innerHTML = `
+      <p><strong>ID:</strong> ${a.id}</p>
+      <p><strong>Status:</strong> ${a.status || "NotTreated"}</p>
+      <p><strong>Date:</strong> ${a.date}</p>
+      <p><strong>Category:</strong> ${a.category || "Uncategorized"}</p>
+      <p><strong>Assigned To:</strong> ${a.assignedTo || "()"}</p>
+      <p><strong>Co-Assigned To:</strong> ${a.coAssignedTo || "()"}</p>
+      <p><strong>Copy To:</strong> ${a.ccTo || "()"}</p>
+      <p><strong>Priority:</strong> ${a.priority || "Medium"}</p>
+      <p><strong>Comments:</strong><br>${(a.comments || "").replace(/\n/g,"<br>")}</p>
+      <p><strong>Attachments:</strong><br>${attachmentsHtml}</p>
+    `;
+  }
+
+  /***********************************************
+   * ACTIONS – MIRROR Power Apps Switch()
+   ***********************************************/
+  function handleAction(actionName, activityId) {
+    const activity = state.activities.find(a => a.id === activityId);
+    if (!activity) return;
+    state.DGOselected = activity;
+
+    // reset assignment context for new operations
+    state.assignmentMeta = null;
+    state.selectedCategory = "";
+    state.selectedSubcategory = "";
+    state.selectedAssignedTo = activity.assignedTo || "";
+    state.selectedCoAssignedTo = activity.coAssignedTo || "";
+    state.selectedCcEmails = activity.ccTo ? activity.ccTo.split(";").filter(Boolean) : [];
+    state.priority = activity.priority || "Medium";
+
+    switch (actionName) {
+      case "Assign":
+        navigate("category", { assignmentType: "newassignment" });
+        break;
+      case "ReAssign":
+        navigate("category", { assignmentType: "reassignment" });
+        break;
+      case "NewAssign":
+      case "NewAssign2":
+        navigate("assignment", { assignmentType: "newassignment" });
+        loadPreviewEmail();
+        break;
+      case "ReNewAssign":
+      case "ReNewAssign2":
+        navigate("assignment", { assignmentType: "reassignment" });
+        loadPreviewEmail();
+        break;
+      case "NYSC":
+        showOverlay("NYSC");
+        break;
+      case "SIWES":
+        showOverlay("SIWES");
+        break;
+      case "Archive":
+        showOverlay("Archive");
+        break;
+      case "PDF":
+      case "View":
+        if (!activity.pdfUrl) {
+          alert("No PDF URL configured for this activity.");
+          return;
+        }
+        window.open(activity.pdfUrl, "_blank", "noopener,noreferrer");
+        break;
+      case "Options":
+        openDetailsById(activityId);
+        break;
+      default:
+        console.warn("Unknown action", actionName);
+    }
+  }
+
+  /***********************************************
+   * OVERLAYS
+   ***********************************************/
+  function showOverlay(type) {
+    closeOverlay();
+    const id = type === "NYSC" ? "dialogNYSC"
+              : type === "SIWES" ? "dialogSIWES"
+              : "dialogArchive";
+    document.getElementById(id).classList.add("visible");
+  }
+  function closeOverlay() {
+    ["dialogNYSC","dialogSIWES","dialogArchive"].forEach(id =>
+      document.getElementById(id).classList.remove("visible")
+    );
+  }
+
+  async function confirmSpecial(type) {
+    closeOverlay();
+    if (!state.DGOselected) return;
+    await callFlow("updateSpecial", {
+      activityId: state.DGOselected.id,
+      action: type
+    });
+    await loadActivities();
+  }
+
+  /***********************************************
+   * CATEGORY MASTER + DSU LOOKUPS (from JSON)
+   ***********************************************/
+  function initCategoryDropdowns() {
+    const catSelect = document.getElementById("categorySelect");
+    const subSelect = document.getElementById("subcategorySelect");
+    if (!catSelect || !subSelect) return;
+
+    const categories = [...new Set(state.categoriesMaster.map(r => r.Category))].sort();
+    catSelect.innerHTML = `<option value="">Select Category</option>`;
+    categories.forEach(cat => {
+      const opt = document.createElement("option");
+      opt.value = cat;
+      opt.textContent = cat;
+      catSelect.appendChild(opt);
+    });
+
+    subSelect.innerHTML = `<option value="">Select Subcategory</option>`;
+
+    // restore selection if state has it
+    if (state.selectedCategory) {
+      catSelect.value = state.selectedCategory;
+      onCategoryChange(state.selectedCategory, true);
+      if (state.selectedSubcategory) {
+        subSelect.value = state.selectedSubcategory;
+      }
+    }
+
+    buildUserSelects();
+  }
+
+  function onCategoryChange(category, fromInit = false) {
+    state.selectedCategory = category || "";
+    state.selectedSubcategory = "";
+    const subSelect = document.getElementById("subcategorySelect");
+    if (!subSelect) return;
+
+    subSelect.innerHTML = `<option value="">Select Subcategory</option>`;
+
+    if (!category) {
+      updateAssignmentFromCategory(null);
+      return;
+    }
+
+    const subcats = state.categoriesMaster
+      .filter(r => r.Category === category)
+      .map(r => r.Subcategory);
+    const uniqueSubs = [...new Set(subcats)];
+    uniqueSubs.forEach(sc => {
+      const opt = document.createElement("option");
+      opt.value = sc;
+      opt.textContent = sc;
+      subSelect.appendChild(opt);
+    });
+
+    if (!fromInit) {
+      updateAssignmentFromCategory(null);
+    }
+  }
+
+  function onSubcategoryChange(subcategory) {
+    state.selectedSubcategory = subcategory || "";
+    if (!subcategory || !state.selectedCategory) {
+      updateAssignmentFromCategory(null);
+      return;
+    }
+    const row = state.categoriesMaster.find(r =>
+      r.Category === state.selectedCategory &&
+      r.Subcategory === subcategory
+    );
+    updateAssignmentFromCategory(row || null);
+  }
+
+  function getDsuEmail(dsuKey) {
+    if (!dsuKey) return "";
+    const rec = state.departmentsInfo.find(d => d.DSU_KEY === dsuKey);
+    return rec && rec.DSU_Head_Personal_Email ? rec.DSU_Head_Personal_Email : "";
+  }
+
+  function updateAssignmentFromCategory(row) {
+    if (!row) {
+      state.assignmentMeta = null;
+      // don't reset user overrides completely; just update labels
+      updateAssignmentLabels();
+      buildAssignmentTables();
+      buildCategoryPreview();
+      syncUserSelectorsUI();
+      return;
+    }
+
+    const primaryDSU  = row["Default Primary Responsible"] || "";
+    const supportDSU  = row["Default Supporting Department/Unit"] || "";
+    const subUnit     = row["Default Supporting SubUnit"] || "";
+    const infoDSU1    = row.INFORMDSU1 || "";
+    const infoDSU2    = row.INFORMDSU2 || "";
+    const infoDSU3    = row.INFORMDSU3 || "";
+    const timeline    = row.Timeline || "";
+    const priority    = row.Priority || "Medium";
+    const permissions = row.Permissions || "";
+
+    const assignedToEmail        = getDsuEmail(primaryDSU);
+    const supportAssignedToEmail = getDsuEmail(supportDSU);
+    const informEmails = [infoDSU1, infoDSU2, infoDSU3]
+      .map(getDsuEmail)
+      .filter(Boolean);
+    const copyTo = informEmails.join(";");
+
+    state.assignmentMeta = {
+      category: row.Category,
+      categoryCode: row["Category Code"],
+      subcategory: row.Subcategory,
+      subCategoryCode: row["SubCategory Code"],
+      primaryDSU,
+      supportDSU,
+      subUnit,
+      infoDSU1,
+      infoDSU2,
+      infoDSU3,
+      timeline,
+      priority,
+      permissions,
+      assignedTo: assignedToEmail,
+      coAssignedTo: supportAssignedToEmail,
+      copyTo
+    };
+
+    // set user-selection defaults from meta
+    state.priority = priority || state.priority;
+    state.selectedAssignedTo = assignedToEmail || state.selectedAssignedTo;
+    state.selectedCoAssignedTo = supportAssignedToEmail || state.selectedCoAssignedTo;
+    state.selectedCcEmails = copyTo ? copyTo.split(";").filter(Boolean) : state.selectedCcEmails;
+
+    if (state.DGOselected) {
+      state.DGOselected.category = row.Category;
+      state.DGOselected.categorization = row.Category + " / " + row.Subcategory;
+      state.DGOselected.assignedTo = state.selectedAssignedTo;
+      state.DGOselected.coAssignedTo = state.selectedCoAssignedTo;
+      state.DGOselected.ccTo = state.selectedCcEmails.join(";");
+      state.DGOselected.priority = state.priority;
+    }
+
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+    syncUserSelectorsUI();
+  }
+
+  function updateAssignmentLabels() {
+    const assignedLabel = document.getElementById("assignedToLabel");
+    const coAssignedLabel = document.getElementById("coAssignedToLabel");
+    const copyLabel = document.getElementById("copyToLabel");
+    const priorityValueEl = document.getElementById("priorityValueLabel");
+
+    if (assignedLabel) {
+      assignedLabel.textContent = state.selectedAssignedTo || "()";
+    }
+    if (coAssignedLabel) {
+      coAssignedLabel.textContent = state.selectedCoAssignedTo || "()";
+    }
+    if (copyLabel) {
+      const copyToText = state.selectedCcEmails.join("; ");
+      copyLabel.textContent = copyToText || "()";
+    }
+    if (priorityValueEl) {
+      priorityValueEl.textContent = state.priority || "Medium";
+    }
+  }
+
+  function setPriority(value) {
+    state.priority = value;
+    if (state.DGOselected) state.DGOselected.priority = value;
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+
+    // highlight priority chips
+    document.querySelectorAll(".chip-btn").forEach(btn => {
+      if (["P1 (High)","P2 (Medium)","P3 (Normal)","P4 (Low)"].includes(btn.textContent.trim())) {
+        btn.classList.toggle("active", btn.textContent.trim() === value);
+      }
+    });
+  }
+
+  /***********************************************
+   * DSU USER SELECTION (AssignedTo / CoAssignedTo / CCTo)
+   ***********************************************/
+  function buildUserSelects() {
+    const assignedSel = document.getElementById("assignedToSelect");
+    const coAssignedSel = document.getElementById("coAssignedToSelect");
+    if (!assignedSel || !coAssignedSel) return;
+
+    const dsus = state.departmentsInfo || [];
+    const optionsHtml = dsus.map(d => {
+      const email = d.DSU_Head_Personal_Email || "";
+      const label = (d.DSU_HeadTitle || d.DSU_KEY || "") + (email ? ` (${email})` : "");
+      return `<option value="${email}">${label}</option>`;
+    }).join("");
+
+    assignedSel.innerHTML = `<option value="">(use default)</option>` + optionsHtml;
+    coAssignedSel.innerHTML = `<option value="">(use default)</option>` + optionsHtml;
+
+    syncUserSelectorsUI();
+    buildCcOptionsList("");
+    renderCcSelectedChips();
+  }
+
+  function syncUserSelectorsUI() {
+    const assignedSel = document.getElementById("assignedToSelect");
+    const coAssignedSel = document.getElementById("coAssignedToSelect");
+    if (assignedSel) {
+      assignedSel.value = state.selectedAssignedTo || "";
+    }
+    if (coAssignedSel) {
+      coAssignedSel.value = state.selectedCoAssignedTo || "";
+    }
+    renderCcSelectedChips();
+  }
+
+  function onAssignedToOverride(email) {
+    state.selectedAssignedTo = email || (state.assignmentMeta && state.assignmentMeta.assignedTo) || "";
+    if (state.DGOselected) state.DGOselected.assignedTo = state.selectedAssignedTo;
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+  }
+
+  function onCoAssignedToOverride(email) {
+    state.selectedCoAssignedTo = email || (state.assignmentMeta && state.assignmentMeta.coAssignedTo) || "";
+    if (state.DGOselected) state.DGOselected.coAssignedTo = state.selectedCoAssignedTo;
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+  }
+
+  function searchCCOptions(query) {
+    buildCcOptionsList(query || "");
+  }
+
+  function buildCcOptionsList(query) {
+    const listDiv = document.getElementById("ccOptionsList");
+    if (!listDiv) return;
+    const q = query.toLowerCase();
+    const dsus = state.departmentsInfo || [];
+    const filtered = dsus.filter(d => {
+      const email = (d.DSU_Head_Personal_Email || "").toLowerCase();
+      const title = (d.DSU_HeadTitle || "").toLowerCase();
+      const key = (d.DSU_KEY || "").toLowerCase();
+      return !q || email.includes(q) || title.includes(q) || key.includes(q);
+    }).slice(0, 50); // limit
+
+    if (!filtered.length) {
+      listDiv.innerHTML = "<div class='text-muted'>No matches.</div>";
+      return;
+    }
+
+    listDiv.innerHTML = filtered.map(d => {
+      const email = d.DSU_Head_Personal_Email || "";
+      const title = d.DSU_HeadTitle || d.DSU_KEY || "";
+      const label = title + (email ? ` (${email})` : "");
+      return `<div class="cc-option-item" onclick="addCcEmail('${email}')">${label}</div>`;
+    }).join("");
+  }
+
+  function addCcEmail(email) {
+    if (!email) return;
+    if (!state.selectedCcEmails.includes(email)) {
+      state.selectedCcEmails.push(email);
+    }
+    if (state.DGOselected) {
+      state.DGOselected.ccTo = state.selectedCcEmails.join(";");
+    }
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+    renderCcSelectedChips();
+  }
+
+  function removeCcEmail(email) {
+    state.selectedCcEmails = state.selectedCcEmails.filter(e => e !== email);
+    if (state.DGOselected) {
+      state.DGOselected.ccTo = state.selectedCcEmails.join(";");
+    }
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+    renderCcSelectedChips();
+  }
+
+  function renderCcSelectedChips() {
+    const chipsDiv = document.getElementById("ccSelectedChips");
+    if (!chipsDiv) return;
+    if (!state.selectedCcEmails.length) {
+      chipsDiv.innerHTML = `<span class="text-muted">No CC recipients selected.</span>`;
+      return;
+    }
+    chipsDiv.innerHTML = state.selectedCcEmails.map(email =>
+      `<span class="cc-chip">${email}<button type="button" onclick="removeCcEmail('${email}')">×</button></span>`
+    ).join("");
+  }
+
+  /***********************************************
+   * CATEGORY SCREEN PREVIEW
+   ***********************************************/
+  function buildCategoryPreview() {
+    const a = state.DGOselected;
+    const meta = state.assignmentMeta;
+    const tbody = document.getElementById("categoryPreviewBody");
+    if (!tbody) return;
+
+    const rows = [
+      ["Activity ID", a ? a.id : "()"],
+      ["Category", meta ? meta.category : (a && a.category) || "()"],
+      ["Subcategory", meta ? meta.subcategory : state.selectedSubcategory || "()"],
+      ["Category Code", meta ? meta.categoryCode : "()"],
+      ["SubCategory Code", meta ? meta.subCategoryCode : "()"],
+      ["Primary DSU", meta ? meta.primaryDSU : "()"],
+      ["Supporting DSU", meta ? meta.supportDSU : "()"],
+      ["Assigned To", state.selectedAssignedTo || (meta && meta.assignedTo) || (a && a.assignedTo) || "()"],
+      ["Co-Assigned To", state.selectedCoAssignedTo || (meta && meta.coAssignedTo) || (a && a.coAssignedTo) || "()"],
+      ["Copy To", state.selectedCcEmails.join(";") || (meta && meta.copyTo) || (a && a.ccTo) || "()"],
+      ["Timeline", meta ? meta.timeline : "()"],
+      ["Priority", state.priority || (meta && meta.priority) || "Medium"],
+      ["Action Required", state.selectedActionRequired || "()"],
+      ["Comments", state.commentsDraft || (a && a.comments) || ""]
+    ];
+
+    tbody.innerHTML = rows.map(([f,v]) =>
+      `<tr><td>${f}</td><td>${v}</td></tr>`
+    ).join("");
+
+    const priorityValueEl = document.getElementById("priorityValueLabel");
+    if (priorityValueEl) {
+      priorityValueEl.textContent = state.priority || "Medium";
+    }
+    const actionBox = document.getElementById("actionRequiredBox");
+    if (actionBox) {
+      actionBox.innerHTML =
+        `Action Required: (<span id="actionRequiredValueLabel">${state.selectedActionRequired || ""}</span>)`;
+    }
+  }
+
+  function setActionRequired(val) {
+    state.selectedActionRequired = val;
+    const labelSpan = document.getElementById("actionRequiredValueLabel");
+    if (labelSpan) labelSpan.textContent = val;
+
+    // highlight action chips (only three)
+    document.querySelectorAll(".chip-btn").forEach(btn => {
+      if (["Review","Approval","Information"].includes(btn.textContent.trim())) {
+        btn.classList.toggle("active", btn.textContent.trim() === val);
+      }
+    });
+
+    buildCategoryPreview();
+  }
+
+  function clearAssignmentEntries() {
+    state.selectedActionRequired = "";
+    state.commentsDraft = "";
+    state.assignmentMeta = null;
+    state.priority = "Medium";
+    state.selectedCategory = "";
+    state.selectedSubcategory = "";
+    state.selectedAssignedTo = "";
+    state.selectedCoAssignedTo = "";
+    state.selectedCcEmails = [];
+
+    const catSel = document.getElementById("categorySelect");
+    const subSel = document.getElementById("subcategorySelect");
+    if (catSel) catSel.value = "";
+    if (subSel) subSel.innerHTML = `<option value="">Select Subcategory</option>`;
+
+    updateAssignmentLabels();
+    buildAssignmentTables();
+    buildCategoryPreview();
+    syncUserSelectorsUI();
+  }
+
+  /***********************************************
+   * ASSIGNMENT SCREEN TABLE
+   ***********************************************/
+  function buildAssignmentTables() {
+    const a = state.DGOselected;
+    const meta = state.assignmentMeta;
+    const tbody = document.getElementById("assignmentTableBody");
+    if (!tbody) return;
+
+    const rows = [
+      ["Activity ID", a ? a.id : "()"],
+      ["Category/SubCategory",
+        meta ? (meta.category + " / " + meta.subcategory) :
+        (state.selectedCategory || (a && a.category) || "Uncategorized") + " / " + (state.selectedSubcategory || "")],
+      ["Categorization", a && a.categorization ? a.categorization : "/"],
+      ["Assign To", state.selectedAssignedTo || (meta && meta.assignedTo) || (a && a.assignedTo) || "()"],
+      ["Co-Assign To", state.selectedCoAssignedTo || (meta && meta.coAssignedTo) || (a && a.coAssignedTo) || "()"],
+      ["Copy To", state.selectedCcEmails.join(";") || (meta && meta.copyTo) || (a && a.ccTo) || "()"],
+      ["Priority", state.priority || (meta && meta.priority) || "Medium"],
+      ["Action Required", state.selectedActionRequired || "()"],
+      ["Comments", state.commentsDraft || (a && a.comments) || ""]
+    ];
+
+    tbody.innerHTML = rows.map(([f,v]) =>
+      `<tr><td>${f}</td><td>${v}</td></tr>`
+    ).join("");
+  }
+
+  /***********************************************
+   * COMMENTS
+   ***********************************************/
+  function saveComments() {
+    state.commentsDraft = document.getElementById("commentsBox").value;
+    if (state.DGOselected) {
+      callFlow("saveComments", {
+        activityId: state.DGOselected.id,
+        comments: state.commentsDraft
+      });
+    }
+    navigate("category");
+  }
+
+  /***********************************************
+   * PREVIEW EMAIL
+   ***********************************************/
+  async function loadPreviewEmail() {
+    if (!state.DGOselected) return;
+    const res = await callFlow("loadPreviewEmail", {
+      activityId: state.DGOselected.id,
+      assignmentType: state.assignmentType
+    });
+    const html = res && res.html
+      ? res.html
+      : `<p>DHRA,</p><p>A new activity has been initiated.</p><p><strong>Subject:</strong> ${state.DGOselected.title}</p>`;
+    document.getElementById("previewEmailBody").innerHTML = html;
+  }
+
+  /***********************************************
+   * SUBMIT ASSIGNMENT
+   ***********************************************/
+  async function submitAssignment() {
+    if (!state.DGOselected) {
+      alert("No activity selected.");
+      return;
+    }
+    const meta = state.assignmentMeta || {};
+    const ccJoined = state.selectedCcEmails.join(";");
+
+    await callFlow("updateAssignment", {
+      activityId: state.DGOselected.id,
+      assignmentType: state.assignmentType,
+      assignTo: state.selectedAssignedTo || meta.assignedTo || state.DGOselected.assignedTo || "",
+      coAssignTo: state.selectedCoAssignedTo || meta.coAssignedTo || state.DGOselected.coAssignedTo || "",
+      ccTo: ccJoined || meta.copyTo || state.DGOselected.ccTo || "",
+      priority: state.priority || meta.priority || "Medium",
+      actionRequired: state.selectedActionRequired || "",
+      comments: state.commentsDraft || state.DGOselected.comments || "",
+      category: meta.category || state.selectedCategory || state.DGOselected.category || "",
+      subcategory: meta.subcategory || state.selectedSubcategory || "",
+      categoryCode: meta.categoryCode || "",
+      subCategoryCode: meta.subCategoryCode || "",
+      timeline: meta.timeline || "",
+      permissions: meta.permissions || ""
+    });
+    await loadActivities();
+    navigate("activities");
+  }
+
+  /***********************************************
+   * LOAD ACTIVITIES (Flow mapping)
+   ***********************************************/
+  function formatDateToDDMMYYYY(dt) {
+    if (!dt) return "";
+    const d = new Date(dt);
+    const dd = String(d.getDate()).padStart(2,"0");
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const yyyy = d.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  }
+
+  function parseAttachments(str) {
+    if (!str) return [];
+    const trimmed = String(str).trim();
+    if (!trimmed) return [];
+    return trimmed.split(";").map((url, i) => ({
+      name: "Attachment_" + (i + 1),
+      url: url.trim()
+    }));
+  }
+
+  function generateActions(item) {
+    const actions = [];
+
+    if (item.Status === "Unknown" || item.Status === "Not Assigned" || item.Status === "NotTreated" || !item.Status) {
+      actions.push("Assign", "NewAssign", "NewAssign2");
+    }
+
+    if (item.Status === "Treated" || item.Status === "Processed" || item.Status === "Completed") {
+      actions.push("ReAssign", "ReNewAssign", "ReNewAssign2");
+    }
+
+    actions.push("PDF", "View");
+    return actions;
+  }
+
+  function normalizeActivity(item) {
+    return {
+      id: item.ID,
+      title: item.Title,
+      comments: item.Description || "",
+      status: item.Status || "Unknown",
+      priority: item.Priority || "Not Assigned",
+      category: item.Category || "Uncategorized",
+      date: formatDateToDDMMYYYY(item.Created),
+      assignedTo: item.AssignedTo && item.AssignedTo !== "N/A" ? item.AssignedTo : "",
+      coAssignedTo: "",
+      ccTo: "",
+      attachments: parseAttachments(item.Attachments),
+      pdfUrl: item.PDFUrl || item.URL || "", // mapped PDF/source URL if present
+      actions: generateActions(item)
+    };
+  }
+
+  async function loadActivities() {
+    const res = await callFlow("loadActivities");
+
+    if (Array.isArray(res)) {
+      state.activities = res.map(normalizeActivity);
+    } else if (res && Array.isArray(res.items)) {
+      state.activities = res.items.map(normalizeActivity);
+    } else {
+      // DEV fallback – can be removed once Flow is wired
+      const fallback = [
+        {
+          ID: 17553,
+          Title: "HENSTEIN RESOURCES LTD (FLEET OPERATIONS, ORGANISATIONAL LEADERSHIP AND CRISIS RESPONSE PROGRAM).pdf",
+          Description: "No description provided",
+          Status: "Unknown",
+          Priority: "Not Assigned",
+          Category: "Uncategorized",
+          Created: "2025-12-09T14:33:23Z",
+          AssignedTo: "N/A",
+          Attachments: ""
+        },
+        {
+          ID: 17552,
+          Title: "CHEC RESOURCES AND MANAGERS LTD (TREASURY MANAGEMENT AND REVENUE ASSURANCE SYSTEMS).pdf",
+          Description: "No description provided",
+          Status: "Unknown",
+          Priority: "Not Assigned",
+          Category: "Uncategorized",
+          Created: "2025-12-09T14:30:07Z",
+          AssignedTo: "N/A",
+          Attachments: ""
+        }
+      ];
+      state.activities = fallback.map(normalizeActivity);
+    }
+
+    renderActivities();
+  }
+
+  /***********************************************
+   * LOAD REFERENCE DATA (JSON files)
+   ***********************************************/
+  async function loadReferenceData() {
+    try {
+      const cats = await fetch("categories.json").then(r => r.json());
+      const dsus = await fetch("departments.json").then(r => r.json());
+
+      state.categoriesMaster = Array.isArray(cats) ? cats : (cats && cats.items) || [];
+      state.departmentsInfo = Array.isArray(dsus) ? dsus : (dsus && dsus.items) || [];
+
+      initCategoryDropdowns();
+    } catch (err) {
+      console.error("Error loading reference data:", err);
+    }
+  }
+
+  /***********************************************
+   * BOOTSTRAP
+   ***********************************************/
+  (function bootstrap() {
+    loadActivities();
+    loadReferenceData();
+  })();
+</script>
+</body>
+</html>

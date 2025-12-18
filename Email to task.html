@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NITDA Email to Task Manager</title>
+    
+    <!-- React & ReactDOM (Reliable CDNs) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Error Handling Script (Runs before React) -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            document.body.innerHTML = `
+                <div style="color: red; padding: 20px; font-family: sans-serif;">
+                    <h2>Application Error</h2>
+                    <p>Something went wrong initializing the app.</p>
+                    <pre>${message} at line ${lineno}:${colno}</pre>
+                </div>
+            `;
+            console.error(error);
+        };
+    </script>
+
+    <!-- NITDA Theme Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        nitda: {
+                            dark: '#05583B',
+                            primary: '#00814D',
+                            light: '#00A859',
+                            accent: '#D4AF37', // Gold
+                            bg: '#F4F6F9',
+                            surface: '#FFFFFF'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #F4F6F9;
+            overflow: hidden; /* App-like feel */
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00814D; }
+
+        .loader-spin {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid #00814D;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- 1. INTERNAL ICON COMPONENTS (Replaces external Lucide dependency to fix white screen) ---
+        const IconWrapper = ({ children, size = 20, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+
+        const Icons = {
+            Mail: (p) => <IconWrapper {...p}><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></IconWrapper>,
+            Home: (p) => <IconWrapper {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></IconWrapper>,
+            Database: (p) => <IconWrapper {...p}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></IconWrapper>,
+            ListChecks: (p) => <IconWrapper {...p}><path d="M10 6h11"/><path d="M10 12h11"/><path d="M10 18h11"/><path d="M4 6h1"/><path d="M4 12h1"/><path d="M4 18h1"/></IconWrapper>,
+            HelpCircle: (p) => <IconWrapper {...p}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></IconWrapper>,
+            Settings: (p) => <IconWrapper {...p}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.35a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></IconWrapper>,
+            Search: (p) => <IconWrapper {...p}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></IconWrapper>,
+            ArrowLeft: (p) => <IconWrapper {...p}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></IconWrapper>,
+            Send: (p) => <IconWrapper {...p}><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></IconWrapper>,
+            MessageSquare: (p) => <IconWrapper {...p}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></IconWrapper>,
+            CheckCircle: (p) => <IconWrapper {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconWrapper>,
+            AlertCircle: (p) => <IconWrapper {...p}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></IconWrapper>,
+            Paperclip: (p) => <IconWrapper {...p}><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></IconWrapper>,
+            Bot: (p) => <IconWrapper {...p}><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></IconWrapper>,
+            FileText: (p) => <IconWrapper {...p}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconWrapper>
+        };
+
+        // --- Configuration ---
+        // REPLACE THESE URLS WITH YOUR ACTUAL POWER AUTOMATE HTTP TRIGGERS
+        const POWER_AUTOMATE_URLS = {
+            AI_ANALYSIS: "https://prod-00.westeurope.logic.azure.com:443/workflows/...", 
+            CREATE_TASK: "https://prod-00.westeurope.logic.azure.com:443/workflows/...",
+            GET_ATTACHMENTS: "https://prod-00.westeurope.logic.azure.com:443/workflows/..."
+        };
+
+        // --- Mock Data Service ---
+        const mockEmails = [
+            {
+                id: "msg-001",
+                subject: "Re: Digital Transformation Framework Review",
+                from: "director@ministry.gov.ng",
+                fromName: "Director Ministry",
+                body: "<p>Dear DG,</p><p>Please find attached the draft review for the framework. We need to expedite the approval process by next Tuesday.</p><p>Regards,<br>Director</p>",
+                receivedDateTime: new Date().toISOString(),
+                hasAttachments: true,
+                isRead: false,
+                attachments: [{ name: "Framework_Draft_v2.pdf", size: "2.4MB" }]
+            },
+            {
+                id: "msg-002",
+                subject: "Invitation to Tech Summit 2025",
+                from: "events@techsummit.ng",
+                fromName: "Tech Summit Events",
+                body: "<p>We are honored to invite NITDA to keynote the opening ceremony...</p>",
+                receivedDateTime: new Date(Date.now() - 86400000).toISOString(),
+                hasAttachments: false,
+                isRead: true,
+                attachments: []
+            },
+            {
+                id: "msg-003",
+                subject: "Budget Approval Request",
+                from: "finance@nitda.gov.ng",
+                fromName: "Finance Dept",
+                body: "<p>Sir, kindly review the attached budget for the upcoming quarter.</p>",
+                receivedDateTime: new Date(Date.now() - 172800000).toISOString(),
+                hasAttachments: true,
+                isRead: true,
+                attachments: [{ name: "Q3_Budget.xlsx", size: "1.1MB" }]
+            }
+        ];
+
+        const mockDepartments = [
+            { id: "DSU001", name: "Cybersecurity Dept", headEmail: "cyber@nitda.gov.ng", headName: "Dr. Cyber Head" },
+            { id: "DSU002", name: "e-Government Dept", headEmail: "egov@nitda.gov.ng", headName: "Mr. eGov Lead" },
+            { id: "DSU003", name: "Corporate Strategy", headEmail: "strategy@nitda.gov.ng", headName: "Mrs. Strategy" }
+        ];
+
+        // --- API Service Wrapper ---
+        const apiService = {
+            triggerFlow: async (url, payload) => {
+                // If URL is placeholder, use Mock
+                if (url.includes("workflows/...")) {
+                    console.log("Using Mock API for:", url, payload);
+                    return new Promise((resolve) => {
+                        setTimeout(() => {
+                            resolve({
+                                ai_response: JSON.stringify({
+                                    Subject: payload.subject || "Extracted Subject",
+                                    Summary: "This is an AI generated summary of the email content highlighting key actions.",
+                                    ActionRequired: "Review and Approve",
+                                    RecommendedAction: "Create Task",
+                                    Priority: "High"
+                                })
+                            });
+                        }, 2000);
+                    });
+                }
+
+                // Real Fetch Implementation
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error('Flow execution failed');
+                    return await response.json();
+                } catch (error) {
+                    console.error("API Error:", error);
+                    throw error;
+                }
+            }
+        };
+
+        // --- Components ---
+
+        // 1. Sidebar Component
+        const Sidebar = ({ activeScreen, setActiveScreen }) => {
+            const menuItems = [
+                { id: 'home', label: 'Home', icon: <Icons.Home size={20}/> },
+                { id: 'emails', label: 'E-mails', icon: <Icons.Mail size={20}/> },
+                { id: 'activities', label: 'Activities', icon: <Icons.Database size={20}/> },
+                { id: 'tasks', label: 'Tasks', icon: <Icons.ListChecks size={20}/> },
+                { id: 'support', label: 'Support', icon: <Icons.HelpCircle size={20}/> },
+            ];
+
+            return (
+                <div className="w-64 bg-nitda-dark text-white h-screen flex flex-col shadow-xl z-20 hidden md:flex">
+                    <div className="p-6 flex items-center gap-3 border-b border-white/10">
+                        <img src="https://nitda.gov.ng/wp-content/uploads/2020/11/nitda-logo.png" className="h-10 bg-white rounded p-1" alt="Logo" />
+                        <div>
+                            <h1 className="font-bold text-lg leading-tight">NITDA</h1>
+                            <p className="text-xs text-gray-300">Task Manager</p>
+                        </div>
+                    </div>
+                    <nav className="flex-1 py-4">
+                        {menuItems.map(item => (
+                            <button
+                                key={item.id}
+                                onClick={() => setActiveScreen(item.id)}
+                                className={`w-full flex items-center gap-3 px-6 py-3 transition-colors ${
+                                    activeScreen === item.id 
+                                    ? 'bg-nitda-light border-l-4 border-nitda-accent' 
+                                    : 'hover:bg-white/10 border-l-4 border-transparent'
+                                }`}
+                            >
+                                {item.icon}
+                                <span className="font-medium">{item.label}</span>
+                            </button>
+                        ))}
+                    </nav>
+                    <div className="p-4 border-t border-white/10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-nitda-accent flex items-center justify-center text-nitda-dark font-bold">U</div>
+                            <div className="overflow-hidden">
+                                <p className="text-sm font-bold truncate">User FullName</p>
+                                <p className="text-xs text-gray-300 truncate">user@nitda.gov.ng</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 2. Loading Spinner
+        const LoadingOverlay = ({ message }) => (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+                <div className="w-16 h-16 border-4 border-gray-200 border-t-nitda-primary rounded-full animate-spin mb-4"></div>
+                <p className="text-nitda-dark font-semibold animate-pulse">{message || "Processing..."}</p>
+            </div>
+        );
+
+        // 3. Notification Toast
+        const Toast = ({ message, type, onClose }) => {
+            useEffect(() => {
+                const timer = setTimeout(onClose, 3000);
+                return () => clearTimeout(timer);
+            }, [onClose]);
+
+            const bgClass = type === 'error' ? 'bg-red-600' : type === 'success' ? 'bg-nitda-light' : 'bg-blue-600';
+
+            return (
+                <div className={`fixed top-4 right-4 ${bgClass} text-white px-6 py-3 rounded shadow-lg flex items-center gap-3 fade-in z-50`}>
+                    {type === 'success' ? <Icons.CheckCircle size={20}/> : <Icons.AlertCircle size={20}/>}
+                    <span>{message}</span>
+                </div>
+            );
+        };
+
+        // 4. Main App Component
+        const App = () => {
+            // App State
+            const [activeScreen, setActiveScreen] = useState('emails');
+            const [viewMode, setViewMode] = useState('list'); // list, detail, form, chat, preview
+            const [isLoading, setIsLoading] = useState(false);
+            const [toast, setToast] = useState(null);
+            
+            // Data State
+            const [emails, setEmails] = useState([]);
+            const [selectedEmail, setSelectedEmail] = useState(null);
+            const [folder, setFolder] = useState('Inbox');
+            const [searchText, setSearchText] = useState("");
+
+            // Chat State
+            const [chatHistory, setChatHistory] = useState([]);
+            const [chatInput, setChatInput] = useState("");
+            const [isChatTyping, setIsChatTyping] = useState(false);
+
+            // Task Form State
+            const [taskForm, setTaskForm] = useState({
+                title: "",
+                description: "",
+                priority: "Medium",
+                category: "",
+                assignedTo: "",
+                assignedToEmail: "",
+                dueDate: new Date().toISOString().split('T')[0]
+            });
+
+            // Dialog State
+            const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+            // Initialization
+            useEffect(() => {
+                // Simulate fetch emails
+                setIsLoading(true);
+                setTimeout(() => {
+                    setEmails(mockEmails);
+                    setIsLoading(false);
+                }, 800);
+            }, [folder]);
+
+            // Handlers
+            const handleEmailSelect = (email) => {
+                setSelectedEmail(email);
+                setViewMode('detail');
+            };
+
+            const handleAction = async (action) => {
+                if (!selectedEmail) return;
+
+                switch(action) {
+                    case 'AI Assist':
+                        setViewMode('chat');
+                        setChatHistory([{
+                            sender: 'system',
+                            text: `Hello! I'm ready to help you process the email: "${selectedEmail.subject}". What would you like to do?`,
+                            timestamp: new Date()
+                        }]);
+                        break;
+                    case 'Create Task':
+                        setIsLoading(true);
+                        // Simulate AI Extraction for Task pre-fill
+                        try {
+                            const result = await apiService.triggerFlow(POWER_AUTOMATE_URLS.AI_ANALYSIS, selectedEmail);
+                            const aiData = JSON.parse(result.ai_response);
+                            
+                            setTaskForm(prev => ({
+                                ...prev,
+                                title: aiData.Subject || selectedEmail.subject,
+                                description: aiData.Summary || selectedEmail.body,
+                                priority: aiData.Priority || "Medium"
+                            }));
+                            setViewMode('form');
+                        } catch (err) {
+                            setToast({ type: 'error', message: "AI Extraction Failed. Please fill manually." });
+                            setViewMode('form'); // Fallback
+                        } finally {
+                            setIsLoading(false);
+                        }
+                        break;
+                    case 'Back':
+                        if (viewMode === 'detail') setViewMode('list');
+                        else setViewMode('detail');
+                        break;
+                    default:
+                        setToast({ type: 'info', message: `${action} feature coming soon.` });
+                }
+            };
+
+            const handleChatSubmit = async () => {
+                if (!chatInput.trim()) return;
+                
+                const userMsg = { sender: 'user', text: chatInput, timestamp: new Date() };
+                setChatHistory(prev => [userMsg, ...prev]); // Newest first for UI stack
+                setChatInput("");
+                setIsChatTyping(true);
+
+                try {
+                    // Call Power Automate Mock
+                    const response = await apiService.triggerFlow(POWER_AUTOMATE_URLS.AI_ANALYSIS, { query: chatInput, context: selectedEmail });
+                    const aiMsg = { 
+                        sender: 'ai', 
+                        text: "Here is the summary based on your request: " + JSON.parse(response.ai_response).Summary, 
+                        timestamp: new Date() 
+                    };
+                    setChatHistory(prev => [aiMsg, ...prev]);
+                } catch (e) {
+                    setChatHistory(prev => [{ sender: 'system', text: "Error connecting to AI Assistant.", timestamp: new Date() }, ...prev]);
+                } finally {
+                    setIsChatTyping(false);
+                }
+            };
+
+            const handleSubmitTask = async () => {
+                setIsLoading(true);
+                setShowConfirmDialog(false);
+                
+                try {
+                    await apiService.triggerFlow(POWER_AUTOMATE_URLS.CREATE_TASK, { ...taskForm, emailId: selectedEmail.id });
+                    setToast({ type: 'success', message: "Task created and assigned successfully!" });
+                    setViewMode('list');
+                    setSelectedEmail(null);
+                } catch (e) {
+                    setToast({ type: 'error', message: "Failed to create task." });
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            // Filter logic
+            const filteredEmails = emails.filter(e => 
+                e.subject.toLowerCase().includes(searchText.toLowerCase()) || 
+                e.fromName.toLowerCase().includes(searchText.toLowerCase())
+            );
+
+            // --- Render Logic ---
+
+            return (
+                <div className="flex h-screen w-full bg-nitda-bg">
+                    {/* Sidebar */}
+                    <Sidebar activeScreen={activeScreen} setActiveScreen={setActiveScreen} />
+
+                    {/* Main Content */}
+                    <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+                        {isLoading && <LoadingOverlay message="Processing..." />}
+                        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+                        {/* Confirmation Dialog */}
+                        {showConfirmDialog && (
+                            <div className="absolute inset-0 z-40 bg-black/50 flex items-center justify-center p-4">
+                                <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 animate-fade-in">
+                                    <h3 className="text-xl font-bold text-nitda-dark mb-4">Confirm Task Creation</h3>
+                                    <div className="bg-gray-50 p-4 rounded mb-4 text-sm text-gray-700">
+                                        <p><strong>Title:</strong> {taskForm.title}</p>
+                                        <p><strong>Assignee:</strong> {taskForm.assignedToEmail || "Not Selected"}</p>
+                                        <p><strong>Priority:</strong> {taskForm.priority}</p>
+                                    </div>
+                                    <div className="flex justify-end gap-3">
+                                        <button onClick={() => setShowConfirmDialog(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
+                                        <button onClick={handleSubmitTask} className="px-4 py-2 bg-nitda-primary text-white rounded hover:bg-nitda-dark">Confirm & Submit</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Mobile Header / Top Bar */}
+                        <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0">
+                            <div className="flex items-center gap-4">
+                                {viewMode !== 'list' && (
+                                    <button onClick={() => handleAction('Back')} className="p-2 hover:bg-gray-100 rounded-full text-nitda-dark">
+                                        <Icons.ArrowLeft size={20} />
+                                    </button>
+                                )}
+                                <h2 className="text-xl font-bold text-nitda-dark">
+                                    {viewMode === 'list' ? `${folder} (${filteredEmails.length})` : 
+                                     viewMode === 'detail' ? 'Email Details' : 
+                                     viewMode === 'chat' ? 'AI Assistant' : 'Create Task'}
+                                </h2>
+                            </div>
+                            
+                            {/* Search (Only on List View) */}
+                            {viewMode === 'list' && (
+                                <div className="relative hidden md:block">
+                                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                        <Icons.Search size={18} />
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search emails..." 
+                                        className="pl-10 pr-4 py-2 border border-nitda-light/30 rounded-full focus:outline-none focus:border-nitda-primary w-64 bg-gray-50"
+                                        value={searchText}
+                                        onChange={(e) => setSearchText(e.target.value)}
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        {/* View Router */}
+                        <div className="flex-1 overflow-auto p-4 md:p-6">
+                            
+                            {/* 1. List View */}
+                            {viewMode === 'list' && (
+                                <div className="space-y-3 max-w-5xl mx-auto">
+                                    {filteredEmails.map(email => (
+                                        <div 
+                                            key={email.id} 
+                                            onClick={() => handleEmailSelect(email)}
+                                            className={`bg-white p-4 rounded-lg shadow-sm border-l-4 cursor-pointer hover:shadow-md transition-all group ${email.isRead ? 'border-transparent' : 'border-nitda-accent'}`}
+                                        >
+                                            <div className="flex justify-between items-start mb-1">
+                                                <h3 className={`text-base ${email.isRead ? 'font-medium text-gray-800' : 'font-bold text-nitda-dark'}`}>
+                                                    {email.fromName}
+                                                </h3>
+                                                <span className="text-xs text-gray-500 whitespace-nowrap">
+                                                    {new Date(email.receivedDateTime).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            <h4 className="text-sm text-gray-700 font-medium mb-2">{email.subject}</h4>
+                                            <p className="text-sm text-gray-500 line-clamp-2" dangerouslySetInnerHTML={{__html: email.body}}></p>
+                                            {email.hasAttachments && (
+                                                <div className="mt-2 flex items-center gap-1 text-xs text-nitda-primary">
+                                                    <Icons.Paperclip size={12}/> <span>Attachments</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* 2. Detail View */}
+                            {viewMode === 'detail' && selectedEmail && (
+                                <div className="max-w-5xl mx-auto h-full flex flex-col md:flex-row gap-6">
+                                    {/* Email Content */}
+                                    <div className="flex-1 bg-white rounded-lg shadow-sm p-6 overflow-auto">
+                                        <div className="border-b pb-4 mb-4">
+                                            <h1 className="text-2xl font-bold text-nitda-dark mb-2">{selectedEmail.subject}</h1>
+                                            <div className="flex justify-between items-center text-sm text-gray-600">
+                                                <span>From: <strong>{selectedEmail.fromName}</strong> ({selectedEmail.from})</span>
+                                                <span>{new Date(selectedEmail.receivedDateTime).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                        <div className="prose max-w-none text-gray-800" dangerouslySetInnerHTML={{__html: selectedEmail.body}}></div>
+                                        
+                                        {selectedEmail.hasAttachments && (
+                                            <div className="mt-8 border-t pt-4">
+                                                <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2"><Icons.Paperclip size={16}/> Attachments</h4>
+                                                <div className="flex gap-3">
+                                                    {selectedEmail.attachments.map((att, idx) => (
+                                                        <div key={idx} className="bg-gray-100 px-3 py-2 rounded text-sm flex items-center gap-2 border border-gray-200">
+                                                            <Icons.FileText size={14} className="text-nitda-primary"/>
+                                                            {att.name}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Actions Sidebar */}
+                                    <div className="w-full md:w-64 flex flex-col gap-3 shrink-0">
+                                        <button onClick={() => handleAction('Create Task')} className="w-full bg-nitda-primary text-white py-3 rounded-lg font-semibold shadow hover:bg-nitda-dark transition-colors flex items-center justify-center gap-2">
+                                            <Icons.ListChecks size={18}/> Create Task
+                                        </button>
+                                        <button onClick={() => handleAction('AI Assist')} className="w-full bg-nitda-accent text-nitda-dark py-3 rounded-lg font-semibold shadow hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2">
+                                            <Icons.Bot size={18}/> AI Assist
+                                        </button>
+                                        <div className="h-px bg-gray-300 my-2"></div>
+                                        <button onClick={() => handleAction('Reply')} className="w-full bg-white text-gray-700 border border-gray-300 py-2 rounded-lg hover:bg-gray-50 text-sm">Reply</button>
+                                        <button onClick={() => handleAction('Forward')} className="w-full bg-white text-gray-700 border border-gray-300 py-2 rounded-lg hover:bg-gray-50 text-sm">Forward</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 3. AI Chat View */}
+                            {viewMode === 'chat' && (
+                                <div className="max-w-3xl mx-auto h-full flex flex-col bg-white rounded-lg shadow-sm border border-gray-200">
+                                    <div className="p-4 bg-nitda-bg border-b flex justify-between items-center">
+                                        <span className="font-bold text-nitda-dark flex items-center gap-2"><Icons.Bot size={20}/> NITDA AI Assistant</span>
+                                        <button onClick={() => setChatHistory([])} className="text-xs text-red-500 hover:underline">Clear Chat</button>
+                                    </div>
+                                    <div className="flex-1 overflow-auto p-4 space-y-4 flex flex-col-reverse">
+                                        {isChatTyping && (
+                                            <div className="flex justify-start">
+                                                <div className="bg-gray-100 p-3 rounded-tr-xl rounded-tl-xl rounded-br-xl text-sm text-gray-500 italic">
+                                                    AI is typing...
+                                                </div>
+                                            </div>
+                                        )}
+                                        {chatHistory.map((msg, idx) => (
+                                            <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[80%] p-3 rounded-xl text-sm shadow-sm ${
+                                                    msg.sender === 'user' 
+                                                    ? 'bg-nitda-primary text-white rounded-br-none' 
+                                                    : 'bg-gray-100 text-gray-800 rounded-bl-none'
+                                                }`}>
+                                                    {msg.text}
+                                                    <div className={`text-[10px] mt-1 ${msg.sender === 'user' ? 'text-green-100' : 'text-gray-400'}`}>
+                                                        {msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="p-4 border-t bg-gray-50 flex gap-2">
+                                        <input 
+                                            type="text" 
+                                            className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:border-nitda-primary"
+                                            placeholder="Ask AI to summarize or extract data..."
+                                            value={chatInput}
+                                            onChange={(e) => setChatInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
+                                        />
+                                        <button onClick={handleChatSubmit} className="bg-nitda-primary text-white p-2 rounded-full hover:bg-nitda-dark">
+                                            <Icons.Send size={20}/>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 4. Task Entry Form */}
+                            {viewMode === 'form' && (
+                                <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-sm p-8 animate-fade-in">
+                                    <div className="flex justify-between items-center mb-6 border-b pb-4">
+                                        <h2 className="text-2xl font-bold text-nitda-dark">Create New Task</h2>
+                                        <span className="bg-green-100 text-nitda-dark px-3 py-1 rounded-full text-xs font-semibold">
+                                            Ref: {new Date().toISOString().split('T')[0].replace(/-/g,'')}-TSK
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                        <div className="col-span-2">
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Task Title</label>
+                                            <input 
+                                                type="text" 
+                                                className="w-full border border-gray-300 rounded p-2 focus:border-nitda-primary outline-none"
+                                                value={taskForm.title}
+                                                onChange={(e) => setTaskForm({...taskForm, title: e.target.value})}
+                                            />
+                                        </div>
+
+                                        <div className="col-span-2">
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Description / Summary</label>
+                                            <textarea 
+                                                className="w-full border border-gray-300 rounded p-2 h-32 focus:border-nitda-primary outline-none resize-none"
+                                                value={taskForm.description}
+                                                onChange={(e) => setTaskForm({...taskForm, description: e.target.value})}
+                                            ></textarea>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Category</label>
+                                            <select 
+                                                className="w-full border border-gray-300 rounded p-2 bg-white"
+                                                value={taskForm.category}
+                                                onChange={(e) => setTaskForm({...taskForm, category: e.target.value})}
+                                            >
+                                                <option value="">Select Category</option>
+                                                <option value="Correspondence">Correspondence</option>
+                                                <option value="Project">Project Management</option>
+                                                <option value="Approval">Approval Request</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Priority</label>
+                                            <select 
+                                                className="w-full border border-gray-300 rounded p-2 bg-white"
+                                                value={taskForm.priority}
+                                                onChange={(e) => setTaskForm({...taskForm, priority: e.target.value})}
+                                            >
+                                                <option value="Low">Low</option>
+                                                <option value="Medium">Medium</option>
+                                                <option value="High">High</option>
+                                                <option value="Critical">Critical</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Assign To (DSU Head)</label>
+                                            <select 
+                                                className="w-full border border-gray-300 rounded p-2 bg-white"
+                                                value={taskForm.assignedToEmail}
+                                                onChange={(e) => setTaskForm({...taskForm, assignedToEmail: e.target.value})}
+                                            >
+                                                <option value="">Select Assignee</option>
+                                                {mockDepartments.map(dept => (
+                                                    <option key={dept.id} value={dept.headEmail}>{dept.headName} ({dept.name})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Due Date</label>
+                                            <input 
+                                                type="date" 
+                                                className="w-full border border-gray-300 rounded p-2"
+                                                value={taskForm.dueDate}
+                                                onChange={(e) => setTaskForm({...taskForm, dueDate: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-4 border-t pt-6">
+                                        <button onClick={() => setViewMode('detail')} className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50">Cancel</button>
+                                        <button onClick={() => setShowConfirmDialog(true)} className="px-6 py-2 bg-nitda-primary text-white rounded font-semibold hover:bg-nitda-dark shadow-lg">Preview & Submit</button>
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NaviHTML Pro V2 (Responsive)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- CodeMirror for Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+        
+        .preview-pattern {
+            background-color: #ffffff;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* CodeMirror Overrides */
+        .CodeMirror {
+            height: 100% !important;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 640px) {
+            .CodeMirror { font-size: 12px; }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="h-14 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-3 shrink-0 z-30 relative">
+        <div class="flex items-center gap-3">
+            <!-- Mobile Menu Toggle -->
+            <button id="menu-btn" class="md:hidden p-2 -ml-2 text-gray-400 hover:text-white" onclick="toggleSidebar()">
+                <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+
+            <div class="flex items-center gap-2">
+                <div class="bg-blue-600 p-1.5 rounded-lg hidden sm:block">
+                    <i data-lucide="zap" class="w-4 h-4 text-white"></i>
+                </div>
+                <h1 class="font-bold tracking-tight text-lg">NaviHTML <span class="hidden sm:inline text-blue-500 text-xs uppercase tracking-wider bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">Pro</span></h1>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-1 sm:gap-2">
+            <button onclick="createNewFile()" class="p-2 hover:bg-gray-800 rounded-md text-gray-400 hover:text-white transition-colors" title="New Draft">
+                <i data-lucide="plus" class="w-5 h-5"></i>
+            </button>
+            <label class="p-2 hover:bg-gray-800 rounded-md text-gray-400 hover:text-white transition-colors cursor-pointer" title="Upload Files">
+                <i data-lucide="upload" class="w-5 h-5"></i>
+                <input type="file" id="file-input" multiple accept=".html,.htm,.txt" class="hidden" />
+            </label>
+            <div class="h-6 w-px bg-gray-800 mx-1 sm:mx-2"></div>
+            <button onclick="clearStorage()" class="text-gray-400 hover:text-red-400 p-2 sm:px-3 sm:py-1.5 rounded hover:bg-red-900/20 transition-colors" title="Reset App">
+                <i data-lucide="trash-2" class="w-5 h-5 sm:hidden"></i>
+                <span class="hidden sm:inline text-xs">Reset</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex overflow-hidden relative">
+        
+        <!-- Sidebar Overlay (Mobile) -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-20 hidden md:hidden backdrop-blur-sm" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="absolute md:relative w-64 bg-gray-900 border-r border-gray-800 h-full flex flex-col z-30 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none">
+            <div class="p-3">
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                    <input type="text" id="search-input" placeholder="Search..." class="w-full bg-gray-800 border border-gray-700 text-sm rounded-md pl-9 pr-3 py-1.5 text-gray-300 focus:outline-none focus:border-blue-500 transition-colors">
+                </div>
+            </div>
+            
+            <div id="file-list" class="flex-1 overflow-y-auto px-2 space-y-0.5 pb-4">
+                <!-- Files injected here -->
+            </div>
+            
+            <div class="p-3 border-t border-gray-800 text-[10px] text-gray-500 text-center uppercase tracking-widest">
+                Local Storage Active
+            </div>
+        </aside>
+
+        <!-- Editor/Preview Area -->
+        <main class="flex-1 flex flex-col min-w-0 bg-gray-900 relative z-10">
+            
+            <!-- Toolbar -->
+            <div class="h-12 sm:h-10 bg-[#1e1e1e] border-b border-gray-800 flex items-center justify-between px-3 shrink-0">
+                <div class="flex items-center gap-2 text-sm text-gray-400 overflow-hidden">
+                    <span id="current-filename" class="font-medium text-gray-200 truncate max-w-[120px] sm:max-w-xs">No file selected</span>
+                    <span id="unsaved-dot" class="hidden w-2 h-2 rounded-full bg-blue-500 ml-1"></span>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <button onclick="downloadCurrentFile()" id="download-btn" class="hidden text-gray-400 hover:text-green-400 transition-colors p-1" title="Download HTML">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                    </button>
+
+                    <div class="flex bg-gray-800 rounded p-0.5 ml-2">
+                        <!-- Split View Button (Hidden on Mobile) -->
+                        <button onclick="setView('split')" id="btn-split" class="hidden sm:block px-3 py-0.5 rounded text-xs font-medium transition-colors text-gray-400 hover:text-white">Split</button>
+                        <button onclick="setView('code')" id="btn-code" class="px-3 py-1 sm:py-0.5 rounded text-xs font-medium transition-colors text-gray-400 hover:text-white">Code</button>
+                        <button onclick="setView('preview')" id="btn-preview" class="px-3 py-1 sm:py-0.5 rounded text-xs font-medium transition-colors bg-gray-700 text-white shadow-sm">Preview</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 flex relative overflow-hidden">
+                
+                <!-- Code Editor Container -->
+                <div id="editor-pane" class="w-full sm:w-1/2 h-full hidden flex-col border-r border-gray-800 bg-[#282a36]">
+                    <textarea id="code-editor"></textarea>
+                </div>
+
+                <!-- Preview Container -->
+                <div id="preview-pane" class="w-full flex-1 h-full relative flex flex-col bg-white">
+                    <iframe id="preview-frame" class="w-full h-full border-none preview-pattern" sandbox="allow-scripts allow-modals allow-forms allow-same-origin"></iframe>
+                    
+                    <!-- Empty State -->
+                    <div id="empty-state" class="absolute inset-0 bg-gray-900 flex flex-col items-center justify-center text-gray-500 z-10 px-4 text-center">
+                        <div class="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mb-4 border border-gray-700">
+                            <i data-lucide="command" class="w-8 h-8 text-blue-500"></i>
+                        </div>
+                        <h3 class="text-gray-300 font-medium mb-1">Ready</h3>
+                        <p class="text-sm opacity-60 max-w-xs">Select a file from the menu to begin.</p>
+                    </div>
+                    
+                    <!-- Viewport Info -->
+                    <div id="res-display" class="absolute bottom-2 right-2 bg-black/80 backdrop-blur text-white text-[10px] px-2 py-1 rounded font-mono opacity-0 pointer-events-none transition-opacity">
+                        -
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- Configuration & State ---
+        let files = [];
+        let currentId = null;
+        let editor = null;
+        let currentView = 'preview'; // preview, code, split
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            loadFromStorage();
+            initEditor();
+            renderFileList();
+            
+            window.addEventListener('resize', () => {
+                updateResolution();
+                // If on mobile and in split view, force switch to preview
+                if (window.innerWidth < 640 && currentView === 'split') {
+                    setView('preview');
+                }
+            });
+            
+            setInterval(saveToStorage, 3000); // Auto-save
+        });
+
+        function initEditor() {
+            editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+                mode: 'htmlmixed',
+                theme: 'dracula',
+                lineNumbers: true,
+                lineWrapping: true,
+                tabSize: 2,
+                autoCloseTags: true,
+                viewportMargin: Infinity // Ensure smooth scrolling
+            });
+
+            editor.on('change', () => {
+                if (!currentId) return;
+                
+                const content = editor.getValue();
+                const file = files.find(f => f.id === currentId);
+                
+                if (file && file.content !== content) {
+                    file.content = content;
+                    file.lastModified = Date.now();
+                    document.getElementById('unsaved-dot').classList.remove('hidden');
+                    
+                    clearTimeout(window.previewTimeout);
+                    window.previewTimeout = setTimeout(() => {
+                        updatePreview(content);
+                        saveToStorage(); 
+                    }, 500);
+                }
+            });
+        }
+
+        // --- File Management ---
+        const fileInput = document.getElementById('file-input');
+        fileInput.addEventListener('change', (e) => {
+            const uploaded = Array.from(e.target.files);
+            if (!uploaded.length) return;
+
+            uploaded.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    addFile(file.name, ev.target.result);
+                };
+                reader.readAsText(file);
+            });
+            e.target.value = ''; 
+        });
+
+        function addFile(name, content) {
+            const id = 'file_' + Date.now() + Math.random().toString(36).substr(2, 5);
+            files.push({ id, name, content, lastModified: Date.now() });
+            saveToStorage();
+            renderFileList();
+            if (!currentId) selectFile(id);
+        }
+
+        function createNewFile() {
+            addFile(`draft-${files.length + 1}.html`, `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Draft</title>
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 20px; line-height: 1.5; }
+        h1 { color: #2563eb; }
+        .box { background: #f3f4f6; padding: 20px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>Hello Mobile</h1>
+        <p>Start editing this file...</p>
+    </div>
+</body>
+</html>`);
+        }
+
+        function deleteFile(e, id) {
+            e.stopPropagation();
+            if (!confirm('Delete this file?')) return;
+            files = files.filter(f => f.id !== id);
+            if (currentId === id) {
+                currentId = null;
+                document.getElementById('empty-state').classList.remove('hidden');
+                document.getElementById('current-filename').textContent = "No file selected";
+                editor.setValue('');
+                document.getElementById('download-btn').classList.add('hidden');
+            }
+            saveToStorage();
+            renderFileList();
+        }
+
+        function selectFile(id) {
+            const file = files.find(f => f.id === id);
+            if (!file) return;
+
+            currentId = id;
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('current-filename').textContent = file.name;
+            document.getElementById('download-btn').classList.remove('hidden');
+            document.getElementById('unsaved-dot').classList.add('hidden');
+
+            editor.setValue(file.content);
+            updatePreview(file.content);
+            
+            renderFileList();
+            
+            // Mobile Interaction: Close sidebar on selection
+            if (window.innerWidth < 768) {
+                toggleSidebar(false);
+            }
+        }
+
+        function renderFileList() {
+            const list = document.getElementById('file-list');
+            const term = document.getElementById('search-input').value.toLowerCase();
+            list.innerHTML = '';
+
+            files
+                .filter(f => f.name.toLowerCase().includes(term))
+                .sort((a, b) => b.lastModified - a.lastModified)
+                .forEach(file => {
+                    const active = file.id === currentId;
+                    const el = document.createElement('div');
+                    el.className = `group flex items-center justify-between px-3 py-2.5 mx-2 rounded-md cursor-pointer text-sm mb-1 transition-all border border-transparent ${active ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200 hover:border-gray-700'}`;
+                    el.onclick = () => selectFile(file.id);
+                    el.innerHTML = `
+                        <div class="flex items-center gap-3 overflow-hidden w-full">
+                            <i data-lucide="file-code" class="w-4 h-4 shrink-0 ${active ? 'text-blue-200' : 'text-gray-600'}"></i>
+                            <span class="truncate w-full text-left">${file.name}</span>
+                        </div>
+                        <button onclick="deleteFile(event, '${file.id}')" class="opacity-100 sm:opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/20 hover:text-red-300 rounded transition-all">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                    `;
+                    list.appendChild(el);
+                });
+            lucide.createIcons();
+        }
+
+        document.getElementById('search-input').addEventListener('input', renderFileList);
+
+        // --- Core Logic ---
+
+        function updatePreview(content) {
+            const frame = document.getElementById('preview-frame');
+            frame.srcdoc = content;
+            frame.onload = updateResolution;
+        }
+
+        function downloadCurrentFile() {
+            if (!currentId) return;
+            const file = files.find(f => f.id === currentId);
+            const blob = new Blob([file.content], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function updateResolution() {
+            const frame = document.getElementById('preview-frame');
+            const disp = document.getElementById('res-display');
+            if (frame.contentWindow) {
+                disp.textContent = `${frame.offsetWidth}px × ${frame.offsetHeight}px`;
+                disp.classList.remove('opacity-0');
+            }
+        }
+
+        // --- Mobile & View Management ---
+
+        function toggleSidebar(forceState) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            
+            const shouldOpen = forceState !== undefined ? forceState : isClosed;
+
+            if (shouldOpen) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function setView(mode) {
+            currentView = mode;
+            const editorPane = document.getElementById('editor-pane');
+            const previewPane = document.getElementById('preview-pane');
+            const btnSplit = document.getElementById('btn-split');
+            const btnCode = document.getElementById('btn-code');
+            const btnPreview = document.getElementById('btn-preview');
+
+            // Reset Buttons
+            [btnSplit, btnCode, btnPreview].forEach(b => {
+                b.className = "px-3 py-0.5 sm:py-0.5 rounded text-xs font-medium transition-colors text-gray-400 hover:text-white";
+            });
+            const activeClass = "px-3 py-1 sm:py-0.5 rounded text-xs font-medium transition-colors bg-gray-700 text-white shadow-sm";
+
+            // Mobile Protection: Split becomes Full Editor
+            if (mode === 'split' && window.innerWidth < 640) mode = 'code';
+
+            if (mode === 'preview') {
+                editorPane.classList.remove('flex');
+                editorPane.classList.add('hidden');
+                previewPane.classList.remove('hidden');
+                previewPane.classList.add('flex');
+                btnPreview.className = activeClass;
+            } else if (mode === 'code') {
+                editorPane.classList.remove('hidden');
+                editorPane.classList.add('flex', 'w-full');
+                previewPane.classList.add('hidden');
+                previewPane.classList.remove('flex');
+                btnCode.className = activeClass;
+            } else if (mode === 'split') {
+                editorPane.classList.remove('hidden', 'w-full');
+                editorPane.classList.add('flex', 'w-1/2'); // Desktop split
+                previewPane.classList.remove('hidden');
+                previewPane.classList.add('flex');
+                btnSplit.className = activeClass;
+            }
+            if(editor) editor.refresh();
+        }
+
+        // --- Persistence ---
+        function saveToStorage() {
+            try {
+                localStorage.setItem('navihtml_pro_files', JSON.stringify(files));
+                document.getElementById('unsaved-dot').classList.add('hidden');
+            } catch (e) { console.error(e); }
+        }
+
+        function loadFromStorage() {
+            const data = localStorage.getItem('navihtml_pro_files');
+            if (data) {
+                try { files = JSON.parse(data); } catch (e) { files = []; }
+            }
+        }
+
+        function clearStorage() {
+            if (confirm("Reset everything?")) {
+                localStorage.removeItem('navihtml_pro_files');
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NITDA Digital Workspace</title>
+    <meta name="description" content="NITDA Email and Task Management System">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=">
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Theme Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        nitda: {
+                            dark: '#05583B',    // Deep Green
+                            primary: '#00814D', // Standard Green
+                            light: '#00A859',   // Bright Green
+                            accent: '#D4AF37',  // Gold
+                            surface: '#FFFFFF',
+                            bg: '#F3F4F6',      // Light Gray
+                            text: '#1F2937'     // Dark Gray
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Segoe UI', 'Roboto', 'Helvetica Neue', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #F3F4F6; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00814D; }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .slide-in { animation: slideIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .loader-spin {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid #00814D;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <!-- Root with Loading Fallback -->
+    <div id="root" class="flex h-screen w-full items-center justify-center bg-gray-100 text-gray-500 font-sans">
+        <div class="text-center">
+            <div class="loader-spin w-10 h-10 mx-auto mb-4 border-gray-400 border-t-green-700"></div>
+            <p>Initializing NITDA Workspace...</p>
+        </div>
+    </div>
+
+    <!-- Error Handler Script -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const root = document.getElementById('root');
+            root.innerHTML = `
+                <div style="color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 20px; border-radius: 5px; max-width: 600px; margin: 20px auto; font-family: sans-serif;">
+                    <h3 style="margin-top:0;">Application Error</h3>
+                    <p>The application failed to start.</p>
+                    <pre style="background: rgba(255,255,255,0.5); padding: 10px; overflow: auto; border-radius: 3px;">${message} at line ${lineno}</pre>
+                </div>
+            `;
+            console.error("Global Error:", error);
+        };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- CONFIGURATION ---
+        const APP_CONFIG = {
+            API: {
+                // Replace these with your actual Logic App / Power Automate URLs
+                AI_ANALYSIS: "https://prod-00.westeurope.logic.azure.com:443/workflows/YOUR_AI_FLOW_ID/triggers/manual/paths/invoke?api-version=2016-06-01",
+                CREATE_TASK: "https://prod-00.westeurope.logic.azure.com:443/workflows/YOUR_TASK_FLOW_ID/triggers/manual/paths/invoke?api-version=2016-06-01",
+                GET_ATTACHMENTS: ""
+            },
+            USER: {
+                name: "H. A. Kani",
+                email: "hkani@nitda.gov.ng",
+                role: "Executive Assistant",
+                initials: "HK"
+            },
+            FOLDERS: ['Inbox', 'Sent', 'Drafts', 'Archived']
+        };
+
+        // --- ICONS (Internal SVGs) ---
+        // Helper component for Icons
+        const Icon = ({ path, size = 20, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        // Fixed Icon Definitions: Wrapped in <g> where necessary
+        const Icons = {
+            Menu: <path d="M3 12h18M3 6h18M3 18h18" />,
+            X: <path d="M18 6 6 18M6 6l12 12" />,
+            Home: <g><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></g>,
+            Mail: <g><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></g>,
+            Database: <g><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></g>,
+            Tasks: <g><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></g>,
+            Support: <g><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></g>,
+            Search: <g><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></g>,
+            Plus: <path d="M12 5v14M5 12h14" />,
+            ArrowLeft: <g><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></g>,
+            Send: <g><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></g>,
+            Bot: <g><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></g>,
+            Paperclip: <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>,
+            Check: <polyline points="20 6 9 17 4 12" />,
+            Clock: <g><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></g>,
+            Filter: <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />,
+            LogOut: <g><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></g>
+        };
+
+        // --- MOCK DATA ---
+        const generateMockEmails = () => [
+            {
+                id: "MSG-2024-001",
+                subject: "Strategic Roadmap Implementation Review",
+                from: "director.strategy@nitda.gov.ng",
+                fromName: "Dr. Strategy Director",
+                folder: "Inbox",
+                body: "<p>Dear EA,</p><p>Attached is the Q1 review of the strategic roadmap. Please create a task for the HODs to review and provide feedback by Friday.</p><p>Regards,<br>Strategy Office</p>",
+                received: new Date().toISOString(),
+                read: false,
+                attachments: [{ name: "Roadmap_Q1.pdf", size: "2.4MB" }]
+            },
+            {
+                id: "MSG-2024-002",
+                subject: "Invitation: Gulf Information Technology Exhibition (GITEX)",
+                from: "events@gitex.com",
+                fromName: "GITEX Global Team",
+                folder: "Inbox",
+                body: "<p>We are pleased to invite the NITDA delegation to GITEX Global 2025. Please find the brochure attached.</p>",
+                received: new Date(Date.now() - 3600000).toISOString(),
+                read: true,
+                attachments: []
+            },
+            {
+                id: "MSG-2024-003",
+                subject: "Draft Policy on AI Adoption",
+                from: "policy@ministry.gov.ng",
+                fromName: "Policy Unit",
+                folder: "Inbox",
+                body: "<p>Kindly review the attached draft policy document regarding AI adoption in federal agencies.</p>",
+                received: new Date(Date.now() - 86400000).toISOString(),
+                read: true,
+                attachments: [{name: "AI_Policy_Draft_v1.docx", size: "1.1MB"}]
+            },
+            {
+                id: "MSG-2024-004",
+                subject: "Sent: Quarterly Report Submission",
+                from: "hkani@nitda.gov.ng",
+                fromName: "H. A. Kani",
+                folder: "Sent",
+                body: "<p>Please find attached the quarterly report as requested.</p>",
+                received: new Date(Date.now() - 172800000).toISOString(),
+                read: true,
+                attachments: [{name: "Report_Q4.pdf", size: "500KB"}]
+            }
+        ];
+
+        const mockTasks = [
+            { id: "TSK-001", title: "Review Cyber Security Framework", status: "In Progress", priority: "High", due: "2025-01-20", assignee: "Dr. Cyber Head" },
+            { id: "TSK-002", title: "Prepare Budget Presentation", status: "Pending", priority: "Medium", due: "2025-01-25", assignee: "Finance Lead" },
+            { id: "TSK-003", title: "Update Staff Directory", status: "Completed", priority: "Low", due: "2024-12-30", assignee: "HR Admin" }
+        ];
+
+        // --- COMPONENTS ---
+
+        // 1. Sidebar Navigation
+        const Sidebar = ({ currentView, setView, isMobileOpen, closeMobile, onReset }) => {
+            const menu = [
+                { id: 'home', label: 'Dashboard', icon: Icons.Home },
+                { id: 'emails', label: 'E-mails', icon: Icons.Mail },
+                { id: 'tasks', label: 'Tasks', icon: Icons.Tasks },
+                { id: 'activities', label: 'Activities', icon: Icons.Database },
+                { id: 'support', label: 'Support', icon: Icons.Support },
+            ];
+
+            const handleNav = (id) => {
+                setView(id);
+                if(id === 'emails') onReset();
+                closeMobile();
+            };
+
+            return (
+                <React.Fragment>
+                    {isMobileOpen && (
+                        <div className="fixed inset-0 bg-black/50 z-20 md:hidden" onClick={closeMobile}></div>
+                    )}
+                    
+                    <div className={`fixed inset-y-0 left-0 w-64 bg-nitda-dark text-white z-30 transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} shadow-xl flex flex-col`}>
+                        <div className="p-6 flex items-center gap-3 border-b border-white/10">
+                            <div className="bg-white p-1 rounded-md">
+                                <img src="https://nitda.gov.ng/wp-content/uploads/2020/11/nitda-logo.png" className="h-8 w-auto" alt="NITDA" />
+                            </div>
+                            <div>
+                                <h1 className="font-bold text-lg leading-tight">NITDA</h1>
+                                <p className="text-xs text-white/70">Workspace</p>
+                            </div>
+                        </div>
+
+                        <nav className="flex-1 py-6 space-y-1">
+                            {menu.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => handleNav(item.id)}
+                                    className={`w-full flex items-center gap-3 px-6 py-3 transition-colors ${
+                                        currentView === item.id 
+                                        ? 'bg-nitda-light border-l-4 border-nitda-accent text-white' 
+                                        : 'text-white/80 hover:bg-white/10 border-l-4 border-transparent'
+                                    }`}
+                                >
+                                    <Icon path={item.icon} />
+                                    <span className="font-medium text-sm">{item.label}</span>
+                                </button>
+                            ))}
+                        </nav>
+
+                        <div className="p-4 border-t border-white/10 bg-nitda-primary/30">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-nitda-accent flex items-center justify-center text-nitda-dark font-bold shadow-sm">
+                                    {APP_CONFIG.USER.initials}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold truncate">{APP_CONFIG.USER.name}</p>
+                                    <p className="text-xs text-white/70 truncate">{APP_CONFIG.USER.role}</p>
+                                </div>
+                                <button className="text-white/60 hover:text-white" title="Logout">
+                                    <Icon path={Icons.LogOut} size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </React.Fragment>
+            );
+        };
+
+        // 2. Dashboard Component
+        const Dashboard = ({ stats, recentEmails, onViewChange }) => (
+            <div className="space-y-6 fade-in p-2">
+                <h2 className="text-2xl font-bold text-nitda-dark">Overview</h2>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[
+                        { label: 'Unread Emails', val: stats.unread, color: 'bg-blue-500', icon: Icons.Mail },
+                        { label: 'Pending Tasks', val: stats.pending, color: 'bg-nitda-accent', icon: Icons.Clock },
+                        { label: 'Completed', val: stats.completed, color: 'bg-nitda-primary', icon: Icons.Check },
+                        { label: 'Urgent', val: stats.highPriority, color: 'bg-red-500', icon: Icons.Tasks }
+                    ].map((s, i) => (
+                        <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+                            <div className={`${s.color} p-3 rounded-lg text-white shadow-md`}>
+                                <Icon path={s.icon} size={24} />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-gray-800">{s.val}</p>
+                                <p className="text-sm text-gray-500">{s.label}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-lg text-gray-800">Recent Emails</h3>
+                            <button onClick={() => onViewChange('emails')} className="text-sm text-nitda-primary hover:underline">View All</button>
+                        </div>
+                        <div className="space-y-3">
+                            {recentEmails.slice(0, 3).map(email => (
+                                <div key={email.id} className="flex gap-3 items-start p-3 hover:bg-gray-50 rounded-lg transition-colors border-b border-gray-50 last:border-0">
+                                    <div className="mt-1 text-nitda-primary"><Icon path={Icons.Mail} size={16}/></div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-800 line-clamp-1">{email.subject}</p>
+                                        <p className="text-xs text-gray-500">{email.fromName} • {new Date(email.received).toLocaleDateString()}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center">
+                        <div className="bg-nitda-bg p-4 rounded-full mb-3">
+                            <Icon path={Icons.Bot} size={32} className="text-nitda-primary"/>
+                        </div>
+                        <h3 className="font-bold text-gray-800">AI Assistant Ready</h3>
+                        <p className="text-sm text-gray-500 mt-2 mb-4">I can help analyze emails, summarize content, and create tasks automatically.</p>
+                        <button onClick={() => onViewChange('emails')} className="px-4 py-2 bg-nitda-primary text-white rounded-lg text-sm hover:bg-nitda-dark transition-colors">
+                            Go to Emails
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+
+        // 3. Task List Component
+        const TaskList = ({ tasks }) => {
+            const [activeFilter, setActiveFilter] = useState('All');
+            const [localSearch, setLocalSearch] = useState('');
+
+            const filteredTasks = tasks.filter(t => {
+                const matchesFilter = activeFilter === 'All' 
+                    ? true 
+                    : activeFilter === 'High Priority' ? t.priority === 'High'
+                    : t.status === activeFilter;
+                const matchesSearch = t.title.toLowerCase().includes(localSearch.toLowerCase()) || 
+                                      t.assignee.toLowerCase().includes(localSearch.toLowerCase());
+                return matchesFilter && matchesSearch;
+            });
+
+            return (
+                <div className="space-y-6 fade-in p-2 h-full flex flex-col">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-2xl font-bold text-nitda-dark">Task Management</h2>
+                        <button className="flex items-center gap-2 px-4 py-2 bg-nitda-primary text-white rounded-lg hover:bg-nitda-dark text-sm">
+                            <Icon path={Icons.Plus} size={16}/> New Task
+                        </button>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 overflow-hidden flex flex-col">
+                        <div className="p-4 border-b bg-gray-50 flex flex-col sm:flex-row justify-between gap-4">
+                            <div className="flex gap-2 overflow-x-auto">
+                                {['All', 'Pending', 'In Progress', 'Completed', 'High Priority'].map(filter => (
+                                    <button 
+                                        key={filter} 
+                                        onClick={() => setActiveFilter(filter)}
+                                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors whitespace-nowrap
+                                            ${activeFilter === filter 
+                                            ? 'bg-nitda-primary border-nitda-primary text-white' 
+                                            : 'bg-white border-gray-200 text-gray-600 hover:border-nitda-primary hover:text-nitda-primary'}`}
+                                    >
+                                        {filter}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="relative w-full sm:w-64">
+                                <input 
+                                    type="text" 
+                                    placeholder="Search tasks..." 
+                                    className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-full focus:outline-none focus:border-nitda-primary bg-white"
+                                    value={localSearch}
+                                    onChange={(e) => setLocalSearch(e.target.value)}
+                                />
+                                <div className="absolute left-2.5 top-2 text-gray-400"><Icon path={Icons.Search} size={14}/></div>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-gray-50 sticky top-0 z-10">
+                                    <tr>
+                                        <th className="p-4 text-xs font-semibold text-gray-500 uppercase">Task Title</th>
+                                        <th className="p-4 text-xs font-semibold text-gray-500 uppercase">Assignee</th>
+                                        <th className="p-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                                        <th className="p-4 text-xs font-semibold text-gray-500 uppercase">Due Date</th>
+                                        <th className="p-4 text-xs font-semibold text-gray-500 uppercase text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {filteredTasks.map(task => (
+                                        <tr key={task.id} className="hover:bg-gray-50 transition-colors group">
+                                            <td className="p-4">
+                                                <p className="font-medium text-gray-800 text-sm">{task.title}</p>
+                                                <p className="text-xs text-gray-400">{task.id}</p>
+                                            </td>
+                                            <td className="p-4 text-sm text-gray-600">{task.assignee}</td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium 
+                                                    ${task.status === 'Completed' ? 'bg-green-100 text-green-700' : 
+                                                      task.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 
+                                                      'bg-blue-100 text-blue-700'}`}>
+                                                    {task.status}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-sm text-gray-600">{task.due}</td>
+                                            <td className="p-4 text-right">
+                                                <button className="text-gray-400 hover:text-nitda-primary"><Icon path={Icons.Menu} size={16}/></button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {filteredTasks.length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="p-8 text-center text-gray-500">No tasks found matching your filters.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 4. Main App Container
+        const App = () => {
+            const [view, setView] = useState('home');
+            const [isMobileNavOpen, setMobileNavOpen] = useState(false);
+            const [isLoading, setIsLoading] = useState(false);
+            const [toast, setToast] = useState(null);
+            
+            const [emails, setEmails] = useState([]);
+            const [tasks, setTasks] = useState(mockTasks);
+            const [emailFolder, setEmailFolder] = useState('Inbox');
+            const [emailSearch, setEmailSearch] = useState('');
+            
+            const [selectedEmail, setSelectedEmail] = useState(null);
+            const [interactionMode, setInteractionMode] = useState('view');
+
+            const [chatHistory, setChatHistory] = useState([]);
+            const [chatInput, setChatInput] = useState("");
+            const [taskFormData, setTaskFormData] = useState({});
+
+            // Simulate Data Fetch
+            useEffect(() => {
+                setIsLoading(true);
+                setTimeout(() => {
+                    setEmails(generateMockEmails());
+                    setIsLoading(false);
+                }, 800);
+            }, []);
+
+            // Computed
+            const stats = useMemo(() => ({
+                unread: emails.filter(e => !e.read).length,
+                pending: tasks.filter(t => t.status !== 'Completed').length,
+                completed: tasks.filter(t => t.status === 'Completed').length,
+                highPriority: tasks.filter(t => t.priority === 'High').length
+            }), [emails, tasks]);
+
+            const filteredEmails = useMemo(() => 
+                emails.filter(e => {
+                    const matchesFolder = e.folder === emailFolder;
+                    const matchesSearch = e.subject.toLowerCase().includes(emailSearch.toLowerCase()) || 
+                                          e.fromName.toLowerCase().includes(emailSearch.toLowerCase());
+                    return matchesFolder && matchesSearch;
+                }), 
+            [emails, emailFolder, emailSearch]);
+
+            // Handlers
+            const showToast = (msg, type = 'success') => {
+                setToast({ msg, type });
+                setTimeout(() => setToast(null), 3000);
+            };
+
+            const handleEmailClick = (email) => {
+                setSelectedEmail(email);
+                setInteractionMode('view');
+                setEmails(prev => prev.map(e => e.id === email.id ? { ...e, read: true } : e));
+            };
+
+            const handleCreateTaskStart = async () => {
+                setInteractionMode('task_form');
+                setIsLoading(true);
+                try {
+                    // Simulation
+                    await new Promise(r => setTimeout(r, 1500));
+                    setTaskFormData({
+                        title: selectedEmail.subject.replace("Re: ", "Action: "),
+                        description: `Source: Email from ${selectedEmail.fromName}\n\nSummary: ${selectedEmail.body.replace(/<[^>]*>?/gm, '').substring(0, 100)}...`,
+                        assignee: "",
+                        priority: "Medium",
+                        dueDate: new Date().toISOString().split('T')[0]
+                    });
+                    showToast("AI Extracted Task Details", "info");
+                } catch (e) {
+                    showToast("AI Analysis Failed", "error");
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            const handleSubmitTask = async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                await new Promise(r => setTimeout(r, 1000));
+                
+                const newTask = {
+                    id: `TSK-${Math.floor(Math.random()*1000)}`,
+                    title: taskFormData.title,
+                    status: 'Pending',
+                    priority: taskFormData.priority,
+                    due: taskFormData.dueDate,
+                    assignee: taskFormData.assignee || "Unassigned"
+                };
+
+                setTasks(prev => [newTask, ...prev]);
+                showToast("Task Created Successfully");
+                setIsLoading(false);
+                setInteractionMode('view');
+                setSelectedEmail(null);
+                setView('tasks');
+            };
+
+            const handleAIChatSend = async () => {
+                if(!chatInput.trim()) return;
+                const userText = chatInput;
+                setChatHistory(prev => [...prev, { role: 'user', text: userText }]);
+                setChatInput("");
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, { role: 'bot', text: `I've analyzed the email. The key action is regarding "${selectedEmail.subject}". Would you like me to draft a response?` }]);
+                }, 1000);
+            };
+
+            const renderEmailList = () => (
+                <div className="h-full flex flex-col">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 px-2 gap-3">
+                        <div className="flex gap-2">
+                            {APP_CONFIG.FOLDERS.map(f => (
+                                <button 
+                                    key={f} 
+                                    onClick={() => setEmailFolder(f)}
+                                    className={`px-3 py-1 text-sm rounded-full transition-colors ${emailFolder === f ? 'bg-nitda-primary text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                                >
+                                    {f}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="relative w-full sm:w-auto">
+                            <input 
+                                type="text" 
+                                placeholder="Search emails..." 
+                                className="w-full sm:w-64 pl-8 pr-3 py-1 text-sm border border-gray-300 rounded-full focus:outline-none focus:border-nitda-primary bg-white"
+                                value={emailSearch}
+                                onChange={(e) => setEmailSearch(e.target.value)}
+                            />
+                            <div className="absolute left-2.5 top-1.5 text-gray-400"><Icon path={Icons.Search} size={14}/></div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 overflow-y-auto">
+                        {filteredEmails.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                                <Icon path={Icons.Mail} size={48} className="mb-2 opacity-20"/>
+                                <p>No emails found in {emailFolder}</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-100">
+                                {filteredEmails.map(email => (
+                                    <div 
+                                        key={email.id} 
+                                        onClick={() => handleEmailClick(email)}
+                                        className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors flex gap-4 ${!email.read ? 'bg-blue-50/50' : ''}`}
+                                    >
+                                        <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${!email.read ? 'bg-nitda-primary' : 'bg-transparent'}`}></div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between mb-1">
+                                                <h4 className={`text-sm truncate ${!email.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>{email.fromName}</h4>
+                                                <span className="text-xs text-gray-400 whitespace-nowrap">{new Date(email.received).toLocaleDateString()}</span>
+                                            </div>
+                                            <p className={`text-sm mb-1 truncate ${!email.read ? 'font-semibold text-gray-800' : 'text-gray-600'}`}>{email.subject}</p>
+                                            <p className="text-xs text-gray-500 line-clamp-1" dangerouslySetInnerHTML={{__html: email.body.replace(/<[^>]*>?/gm, '')}}></p>
+                                            {email.attachments.length > 0 && (
+                                                <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                                                    <Icon path={Icons.Paperclip} size={10}/> {email.attachments.length} Attachment
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+
+            const renderEmailDetail = () => (
+                <div className="h-full flex flex-col md:flex-row gap-4 overflow-hidden">
+                    <div className={`flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden ${interactionMode !== 'view' ? 'hidden md:flex' : ''}`}>
+                        <div className="p-3 border-b flex justify-between items-center bg-gray-50">
+                            <button onClick={() => setSelectedEmail(null)} className="flex items-center gap-1 text-sm text-gray-600 hover:text-nitda-primary">
+                                <Icon path={Icons.ArrowLeft} size={16}/> Back
+                            </button>
+                            <div className="flex gap-2">
+                                <button onClick={() => { setInteractionMode('ai_chat'); setChatHistory([]); }} className="p-2 text-nitda-accent hover:bg-yellow-50 rounded-lg" title="AI Assist">
+                                    <Icon path={Icons.Bot} size={20}/>
+                                </button>
+                                <button onClick={handleCreateTaskStart} className="p-2 text-nitda-primary hover:bg-green-50 rounded-lg" title="Create Task">
+                                    <Icon path={Icons.Tasks} size={20}/>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <h2 className="text-xl font-bold text-gray-800 mb-2">{selectedEmail.subject}</h2>
+                            <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+                                <div className="w-10 h-10 rounded-full bg-nitda-primary text-white flex items-center justify-center font-bold text-sm">
+                                    {selectedEmail.fromName.substring(0,2).toUpperCase()}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-gray-800">{selectedEmail.fromName}</p>
+                                    <p className="text-xs text-gray-500">{selectedEmail.from}</p>
+                                </div>
+                                <div className="ml-auto text-xs text-gray-400">{new Date(selectedEmail.received).toLocaleString()}</div>
+                            </div>
+                            
+                            <div className="prose text-gray-700 text-sm" dangerouslySetInnerHTML={{__html: selectedEmail.body}}></div>
+
+                            {selectedEmail.attachments.length > 0 && (
+                                <div className="mt-8 pt-4 border-t">
+                                    <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Attachments</h4>
+                                    <div className="flex gap-2">
+                                        {selectedEmail.attachments.map((att, i) => (
+                                            <div key={i} className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100">
+                                                <div className="p-1 bg-white rounded border"><Icon path={Icons.Paperclip} size={14} className="text-red-500"/></div>
+                                                <span className="text-sm text-gray-700">{att.name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {interactionMode !== 'view' && (
+                        <div className="w-full md:w-[400px] bg-white rounded-xl shadow-xl border border-gray-200 flex flex-col animate-slideIn z-10">
+                            <div className="p-4 border-b flex justify-between items-center bg-nitda-primary text-white rounded-t-xl">
+                                <h3 className="font-bold flex items-center gap-2">
+                                    <Icon path={interactionMode === 'ai_chat' ? Icons.Bot : Icons.Tasks} size={18}/>
+                                    {interactionMode === 'ai_chat' ? 'AI Assistant' : 'Create Task'}
+                                </h3>
+                                <button onClick={() => setInteractionMode('view')} className="hover:bg-white/20 p-1 rounded"><Icon path={Icons.X} size={18}/></button>
+                            </div>
+
+                            {interactionMode === 'ai_chat' ? (
+                                <React.Fragment>
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                                        {chatHistory.length === 0 && (
+                                            <div className="text-center text-gray-400 mt-10 text-sm">
+                                                <p>Ask me to summarize this email or suggest tasks.</p>
+                                            </div>
+                                        )}
+                                        {chatHistory.map((msg, i) => (
+                                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[85%] p-3 rounded-lg text-sm ${msg.role === 'user' ? 'bg-nitda-primary text-white' : 'bg-white border border-gray-200 text-gray-800'}`}>
+                                                    {msg.text}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="p-3 border-t bg-white flex gap-2">
+                                        <input 
+                                            className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-nitda-primary"
+                                            placeholder="Type a message..."
+                                            value={chatInput}
+                                            onChange={(e) => setChatInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAIChatSend()}
+                                        />
+                                        <button onClick={handleAIChatSend} className="p-2 bg-nitda-primary text-white rounded-full"><Icon path={Icons.Send} size={18}/></button>
+                                    </div>
+                                </React.Fragment>
+                            ) : (
+                                <form onSubmit={handleSubmitTask} className="flex-1 overflow-y-auto p-5 space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1">Task Title</label>
+                                        <input required className="w-full border border-gray-300 rounded p-2 text-sm focus:border-nitda-primary outline-none" 
+                                            value={taskFormData.title || ''} onChange={e => setTaskFormData({...taskFormData, title: e.target.value})} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1">Description</label>
+                                        <textarea className="w-full border border-gray-300 rounded p-2 text-sm h-24 resize-none focus:border-nitda-primary outline-none"
+                                            value={taskFormData.description || ''} onChange={e => setTaskFormData({...taskFormData, description: e.target.value})}></textarea>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 mb-1">Priority</label>
+                                            <select className="w-full border border-gray-300 rounded p-2 text-sm"
+                                                value={taskFormData.priority} onChange={e => setTaskFormData({...taskFormData, priority: e.target.value})}>
+                                                <option>Low</option><option>Medium</option><option>High</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 mb-1">Due Date</label>
+                                            <input type="date" className="w-full border border-gray-300 rounded p-2 text-sm"
+                                                value={taskFormData.dueDate} onChange={e => setTaskFormData({...taskFormData, dueDate: e.target.value})}/>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1">Assign To</label>
+                                        <input className="w-full border border-gray-300 rounded p-2 text-sm focus:border-nitda-primary outline-none" 
+                                            placeholder="Department or Email"
+                                            value={taskFormData.assignee || ''} onChange={e => setTaskFormData({...taskFormData, assignee: e.target.value})} />
+                                    </div>
+                                    <div className="pt-4 flex gap-3">
+                                        <button type="button" onClick={() => setInteractionMode('view')} className="flex-1 py-2 border border-gray-300 text-gray-600 rounded text-sm hover:bg-gray-50">Cancel</button>
+                                        <button type="submit" className="flex-1 py-2 bg-nitda-primary text-white rounded text-sm hover:bg-nitda-dark font-medium shadow-md">Create Task</button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+
+            return (
+                <div className="flex h-screen w-full font-sans overflow-hidden">
+                    <Sidebar 
+                        currentView={view} 
+                        setView={setView} 
+                        isMobileOpen={isMobileNavOpen} 
+                        closeMobile={() => setMobileNavOpen(false)} 
+                        onReset={() => setSelectedEmail(null)}
+                    />
+
+                    <div className="flex-1 flex flex-col min-w-0 bg-nitda-bg relative">
+                        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 shadow-sm z-10 shrink-0">
+                            <div className="flex items-center gap-4">
+                                <button onClick={() => setMobileNavOpen(true)} className="md:hidden text-gray-600 hover:text-nitda-primary">
+                                    <Icon path={Icons.Menu} size={24} />
+                                </button>
+                                <h2 className="text-xl font-bold text-nitda-dark capitalize">
+                                    {view === 'emails' ? (selectedEmail ? 'Email Detail' : emailFolder) : view}
+                                </h2>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="hidden sm:block text-xs text-gray-500">{new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'})}</span>
+                                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-nitda-primary border border-gray-200">
+                                    <Icon path={Icons.Bot} size={18}/>
+                                </div>
+                            </div>
+                        </header>
+
+                        <main className="flex-1 overflow-hidden p-4 sm:p-6 relative">
+                            {view === 'home' && (
+                                <Dashboard 
+                                    stats={stats} 
+                                    recentEmails={emails} 
+                                    onViewChange={(v) => {
+                                        setView(v);
+                                        if(v === 'emails') setSelectedEmail(null);
+                                    }} 
+                                />
+                            )}
+                            
+                            {view === 'emails' && (
+                                selectedEmail ? renderEmailDetail() : renderEmailList()
+                            )}
+
+                            {view === 'tasks' && <TaskList tasks={tasks} />}
+
+                            {(view === 'activities' || view === 'support') && (
+                                <div className="h-full flex flex-col items-center justify-center text-gray-400 fade-in">
+                                    <div className="p-6 bg-white rounded-full shadow-sm mb-4">
+                                        <Icon path={view === 'activities' ? Icons.Database : Icons.Support} size={48} className="text-nitda-primary opacity-50"/>
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-600 mb-1">Coming Soon</h3>
+                                    <p className="text-sm">The {view} module is currently under development.</p>
+                                </div>
+                            )}
+                        </main>
+
+                        {isLoading && (
+                            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-50 flex items-center justify-center">
+                                <div className="flex flex-col items-center">
+                                    <div className="loader-spin w-12 h-12 mb-3"></div>
+                                    <p className="text-sm font-semibold text-nitda-dark animate-pulse">Processing...</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {toast && (
+                            <div className={`absolute top-4 right-4 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 text-white text-sm font-medium slide-in
+                                ${toast.type === 'error' ? 'bg-red-600' : toast.type === 'info' ? 'bg-blue-600' : 'bg-nitda-light'}`}>
+                                <Icon path={toast.type === 'error' ? Icons.X : Icons.Check} size={18} />
+                                {toast.msg}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

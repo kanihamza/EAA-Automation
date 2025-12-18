@@ -1,0 +1,2111 @@
+
+  Data Sync:
+    Properties:
+      OnVisible: |-
+        =
+                If(IsBlank(varActiveView), Set(varActiveView, 1));
+                Set(varFlyoutOpen, false);
+                Set(varIsCompact, App.Width < BreakpointMedium);
+                UpdateContext({locIsLoading: false}); // Show spinner
+        Set(showNav,true);
+    Children:
+      - cntRoot_2:
+          Control: GroupContainer@1.3.0
+          Variant: AutoLayout
+          Properties:
+            Fill: =AppStyles.backgroundColor
+            Height: =App.Height
+            LayoutDirection: =LayoutDirection.Vertical
+            LayoutGap: =AppSpacing.Gap
+            PaddingBottom: =AppSpacing.Padding
+            PaddingLeft: =AppSpacing.Padding
+            PaddingRight: =AppSpacing.Padding
+            PaddingTop: =AppSpacing.Padding
+            Width: =App.Width
+          Children:
+            - cmpScreenHeader_31:
+                Control: CanvasComponent
+                ComponentName: cmpScreenHeader
+                Properties:
+                  AlignInContainer: =AlignInContainer.Stretch
+                  Fill: =Color.Transparent
+                  Height: =30
+                  IsDebugMode: =false
+                  LayoutMinHeight: =30
+                  LayoutMinWidth: =0
+                  UserDepartment: =UserDetails.TTSDeptkey
+                  UserName: |-
+                    ="User:    "& User().FullName
+                  Width: =200
+                  Y: =20
+                  cmpAppRestart: =cmpScreenHeader_31.cmpHomeNav
+                  cmpHeaderActions: |-
+                    =[
+
+                        {
+                            ActionName: "Navigation",
+                            Name: "Navigation",
+                            TextColor: "#00A69D",
+                            Color: "#FFB400",
+                            // Yellow for toggle actions
+                    Icon: Icon.Manufacture
+                        }
+                    ]
+                  cmpHomeNav: ='Home Screen'
+                  varDeviceType: =
+            - cmdBar_2:
+                Control: GroupContainer@1.3.0
+                Variant: AutoLayout
+                Properties:
+                  Fill: =AppTheme_Default.SecondaryBackground
+                  FillPortions: =0
+                  Height: =If(App.Width <= BreakpointMedium, 30, 35)
+                  LayoutAlignItems: =Align.Center
+                  LayoutDirection: =LayoutDirection.Horizontal
+                  LayoutGap: =AppSpacing.S
+                  LayoutJustifyContent: =LayoutJustifyContent.SpaceBetween
+                  LayoutMinHeight: =
+                  PaddingLeft: =AppSpacing.S
+                  PaddingRight: =AppSpacing.S
+                  Width: =Parent.Width
+                Children:
+                  - cmdTabs_2:
+                      Control: GroupContainer@1.3.0
+                      Variant: AutoLayout
+                      Properties:
+                        Height: =Parent.Height
+                        LayoutAlignItems: =Align.Center
+                        LayoutDirection: =LayoutDirection.Horizontal
+                        LayoutGap: =AppSpacing.S
+                        LayoutMinHeight: =
+                        LayoutMinWidth: =
+                        Width: =If(App.Width <= BreakpointLarge, Parent.Width*0.36, Parent.Width*0.32)
+                      Children:
+                        - togSortDir_2:
+                            Control: Classic/Toggle@2.1.0
+                            Properties:
+                              Default: =varSortDir="Descending"
+                              FalseText: ="Ascending"
+                              Height: =34
+                              OnChange: |-
+                                =UpdateContext({ varSortDir: If(Self.Value, "Descending", "Ascending") })
+                              OnCheck: =UpdateContext({UnifiedView:true,showNav:true})
+                              OnSelect: |-
+                                =// Initialize
+                                Set(varActionStart, Now());
+                                Set(varActionName, "ReloadAll");
+                                UpdateContext({locIsLoading: true, locDataError: false});
+                                Clear(colActionTelemetry);
+
+                                // Start telemetry
+                                Collect(colActionTelemetry, {Timestamp: varActionStart, Action: varActionName, Step: "Start", Status: "Started", Duration_ms: 0});
+
+                                // Define batch size
+                                Set(gblBatchSize, 500);
+                                Set(gblSkipDocs, 0);
+                                Set(gblSkipTasks, 0);
+
+                                // Load first batch concurrently
+                                Concurrent(
+                                    ClearCollect(colDocsTracking2, GetDocsHTTP.Run({skip: gblSkipDocs, top: gblBatchSize}).value),
+                                    ClearCollect(colTasksTracking2, GetTasksHTTP.Run({skip: gblSkipTasks, top: gblBatchSize}).value),
+                                    ClearCollect(colEmailsTracking2, GetEmailsHTTP.Run({skip: 0, top: gblBatchSize}).value)
+                                );
+
+                                // Update telemetry
+                                Collect(colActionTelemetry, {
+                                    Timestamp: Now(),
+                                    Action: varActionName,
+                                    Step: "InitialBatch",
+                                    Status: "Success",
+                                    Duration_ms: DateDiff(varActionStart, Now(), TimeUnit.Milliseconds),
+                                    Message: "Docs: " & CountRows(colDocsTracking) & ", Tasks: " & CountRows(colTasksTracking)
+                                });
+
+                                // Provide Load More logic
+                                Set(varHasMoreDocs, CountRows(colDocsTracking) >= gblBatchSize);
+                                Set(varHasMoreTasks, CountRows(colTasksTracking) >= gblBatchSize);
+                              OnUncheck: =UpdateContext({UnifiedView:false,showNav:false})
+                              TrueText: ="Descending"
+                        - tabDash_2:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              AlignInContainer: =AlignInContainer.Stretch
+                              BorderColor: =If(varActiveView = 1, ButtonStyles.Primary.BorderColor, ButtonStyles.Secondary.BorderColor)
+                              Color: =If(varActiveView = 1, ButtonStyles.Primary.Color, ButtonStyles.Secondary.Color)
+                              Fill: =If(varActiveView = 1, ButtonStyles.Primary.Fill, ButtonStyles.Secondary.Fill)
+                              FillPortions: =1
+                              Height: =30
+                              HoverFill: =ColorFade(Self.Fill, -10%)
+                              LayoutMinHeight: =
+                              LayoutMinWidth: =
+                              OnSelect: |-
+                                =Set(varActiveView, 1);
+
+
+
+                                ClearCollect(
+                                    colDocTaskEmailMatrix,
+                                    ForAll(
+                                        colDocsTracking As Doc, // Using 'As' operator for better readability
+                                        With(
+                                            {
+                                                relatedTasks: Filter(colTasksTracking, RefIDD = Doc.ID),
+                                                relatedEmails: Filter(
+                                                    colEmailsTracking,
+                                                    // Consider using ID-based filter if possible for performance
+                                                    !IsBlank(Find(Doc.Title, Subject)) || !IsBlank(Find(Doc.Title, Body))
+                                                )
+                                                // If you have attachments, filter them here too:
+                                                // relatedAttachments: Filter(colAttachmentsTracking, RefIDD = Doc.ID)
+                                            },
+                                            {
+                                                // Original Fields
+                                                Created: Doc.Created,
+                                                ID: Doc.ID,
+                                                Title: Doc.Title,
+                                                Category: Doc.Category,
+                                                Status: Doc.Status,
+                                                AssignedTo: Doc.AssignedTo,
+                                                Tasks: relatedTasks,
+                                                Responses: relatedEmails,
+                                                // Add Attachments table here if needed:
+                                                // Attachments: relatedAttachments,
+
+                                                // --- ADDED COUNTS ---
+                                                TaskCount: CountRows(relatedTasks),
+                                                ResponseCount: CountRows(relatedEmails)
+                                                // Add Attachment count here if needed:
+                                                // AttachmentCount: CountRows(relatedAttachments)
+                                            }
+                                        )
+                                    )
+                                )
+                              PressedFill: =ColorFade(Self.Fill, -25%)
+                              RadiusBottomLeft: =AppSpacing.Radius
+                              RadiusBottomRight: =AppSpacing.Radius
+                              RadiusTopLeft: =AppSpacing.Radius
+                              RadiusTopRight: =AppSpacing.Radius
+                              Size: =8
+                              Text: |+
+                                ="Dashboard" & Icon.Home & CountRows(colDocTaskEmailMatrix)
+
+                              Width: =If(App.Width <= BreakpointMedium, 110, 120)
+                        - tabDocs_2:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              AlignInContainer: =AlignInContainer.Stretch
+                              BorderColor: =If(varActiveView = 2, ButtonStyles.Info.BorderColor, ButtonStyles.Secondary.BorderColor)
+                              Color: =If(varActiveView = 2, ButtonStyles.Info.Color, ButtonStyles.Secondary.Color)
+                              Fill: =If(varActiveView = 2, ButtonStyles.Info.Fill, ButtonStyles.Secondary.Fill)
+                              FillPortions: =1
+                              Height: =30
+                              HoverFill: =ColorFade(Self.Fill, -10%)
+                              LayoutMinHeight: =
+                              LayoutMinWidth: =
+                              OnSelect: =Set(varActiveView, 2)
+                              PressedFill: =ColorFade(Self.Fill, -25%)
+                              RadiusBottomLeft: =AppSpacing.Radius
+                              RadiusBottomRight: =AppSpacing.Radius
+                              RadiusTopLeft: =AppSpacing.Radius
+                              RadiusTopRight: =AppSpacing.Radius
+                              Size: =8
+                              Text: ="Docs " & CountRows(colDocsTracking)
+                              Width: =tabDash_2.Width
+                        - tabTasks_4:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              AlignInContainer: =AlignInContainer.Stretch
+                              BorderColor: =If(varActiveView = 3, ButtonStyles.AccentTeal.BorderColor, ButtonStyles.Secondary.BorderColor)
+                              Color: =If(varActiveView = 3, ButtonStyles.AccentTeal.Color, ButtonStyles.Secondary.Color)
+                              Fill: =If(varActiveView = 3, ButtonStyles.AccentTeal.Fill, ButtonStyles.Secondary.Fill)
+                              FillPortions: =1
+                              Height: =30
+                              HoverFill: =ColorFade(Self.Fill, -10%)
+                              LayoutMinHeight: =
+                              LayoutMinWidth: =
+                              OnSelect: =Set(varActiveView, 3);
+                              PressedFill: =ColorFade(Self.Fill, -25%)
+                              RadiusBottomLeft: =AppSpacing.Radius
+                              RadiusBottomRight: =AppSpacing.Radius
+                              RadiusTopLeft: =AppSpacing.Radius
+                              RadiusTopRight: =AppSpacing.Radius
+                              Size: =8
+                              Text: ="Tasks " & CountRows(colTasksTrack)
+                              Width: =tabDash_2.Width
+                        - tabTasks_6:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              AlignInContainer: =AlignInContainer.Stretch
+                              BorderColor: =If(varActiveView = 3, ButtonStyles.AccentTeal.BorderColor, ButtonStyles.Secondary.BorderColor)
+                              Color: =If(varActiveView = 3, ButtonStyles.AccentTeal.Color, ButtonStyles.Secondary.Color)
+                              Fill: =If(varActiveView = 3, ButtonStyles.AccentTeal.Fill, ButtonStyles.Secondary.Fill)
+                              FillPortions: =1
+                              Height: =30
+                              HoverFill: =ColorFade(Self.Fill, -10%)
+                              LayoutMinHeight: =
+                              LayoutMinWidth: =
+                              OnSelect: |+
+                                =Set(varActiveView, 4);
+                              PressedFill: =ColorFade(Self.Fill, -25%)
+                              RadiusBottomLeft: =AppSpacing.Radius
+                              RadiusBottomRight: =AppSpacing.Radius
+                              RadiusTopLeft: =AppSpacing.Radius
+                              RadiusTopRight: =AppSpacing.Radius
+                              Size: =8
+                              Text: ="Emails "
+                              Width: =tabDash_2.Width
+                        - tabTasks_9:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              AlignInContainer: =AlignInContainer.Stretch
+                              BorderColor: =If(varActiveView = 3, ButtonStyles.AccentTeal.BorderColor, ButtonStyles.Secondary.BorderColor)
+                              Color: =If(varActiveView = 3, ButtonStyles.AccentTeal.Color, ButtonStyles.Secondary.Color)
+                              Fill: =If(varActiveView = 3, ButtonStyles.AccentTeal.Fill, ButtonStyles.Secondary.Fill)
+                              FillPortions: =1
+                              Height: =30
+                              HoverFill: =ColorFade(Self.Fill, -10%)
+                              LayoutMinHeight: =
+                              LayoutMinWidth: =
+                              OnSelect: |
+                                =Set(varActiveView, 5);
+                              PressedFill: =ColorFade(Self.Fill, -25%)
+                              RadiusBottomLeft: =AppSpacing.Radius
+                              RadiusBottomRight: =AppSpacing.Radius
+                              RadiusTopLeft: =AppSpacing.Radius
+                              RadiusTopRight: =AppSpacing.Radius
+                              Size: =8
+                              Text: ="Telemetry "
+                              Width: =tabDash_2.Width
+            - cmdTabs_3:
+                Control: GroupContainer@1.3.0
+                Variant: AutoLayout
+                Properties:
+                  FillPortions: =0
+                  Height: =40
+                  LayoutAlignItems: =Align.Center
+                  LayoutDirection: =LayoutDirection.Horizontal
+                  LayoutGap: =AppSpacing.S
+                  LayoutMinHeight: =
+                  Width: =If(App.Width <= BreakpointLarge, Parent.Width*0.36, Parent.Width*0.32)
+                Children:
+                  - tabTasks_7:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        AlignInContainer: =AlignInContainer.Stretch
+                        BorderColor: =If(varActiveView = 3, ButtonStyles.AccentTeal.BorderColor, ButtonStyles.Secondary.BorderColor)
+                        Color: =If(varActiveView = 3, ButtonStyles.AccentTeal.Color, ButtonStyles.Secondary.Color)
+                        Fill: =If(varActiveView = 3, ButtonStyles.AccentTeal.Fill, ButtonStyles.Secondary.Fill)
+                        FillPortions: =1
+                        Height: =30
+                        HoverFill: =ColorFade(Self.Fill, -10%)
+                        LayoutMinHeight: =
+                        LayoutMinWidth: =
+                        OnSelect: "=\n// ===================================================================\n// --- 1. Performance Tracking & Initialize ---\n// ===================================================================\nSet(varActionStart, Now());\nSet(varActionName, \"Screen OnVisible\");\nUpdateContext({ locIsLoading: true, locDataError: false });\nClear(colActionTelemetry);\nCollect(\n    colActionTelemetry,\n    {\n        Timestamp: varActionStart,\n        Action: varActionName,\n        Step: \"Action_Start\",\n        Status: \"Started\",\n        Duration_ms: 0,\n        Message: \"\"\n    }\n);\n\n// ===================================================================\n// --- 2. Initialize Screen Variables ---\n// ===================================================================\nSet(varActiveTab, \"Details\");\nSet(varSelectedDoc, Blank());\nUpdateContext({\n    ctxShowAdd: false,\n    ctxShowAddTask: false\n});\nSet(varShowActiveOnly, false);\n\n// ===================================================================\n// --- 3. Check for Existing Data (Cache) ---\n// ===================================================================\n// Only load data if any of the main collections are empty.\n// This prevents re-loading data every time the user visits the screen.\nIf(\n    IsEmpty(colDocsTracking) || IsEmpty(colTasksTracking) || IsEmpty(colEmailsTracking),\n    \n    // --- 3a. Load All Data Concurrently (in Parallel) ---\n    Set(varStepStart, Now());\n    IfError(\n        Concurrent(\n            // Docs load via HTTP Flow\n            Set(\n                gblDocsResponse,\n                GetDocsHTTP.Run({\n                    text: \"ID,Created,Title,Description,Category0,StartDate,Status,AssignedTo,Author/Title,Editor/EMail,AttachmentLink\",\n                    text_1: \"Author,Editor\",\n                    text_2: \"\"\n                })\n            ),\n            // Tasks load via HTTP Flow\n            Set(\n                gblTasksResponse,\n                GetTasksHTTP.Run(\n                    \"ID,Created,Title,Description,Progress,Priority,StartDate,DueDate,AssignedTo,Author/Title,Editor/EMail,RefID/Title,GBDLookUp/Title,GDSUROUT\",\n                    \"Author,Editor,RefID,GBDLookUp\",\n                    \"\"\n                ).gbltasksflowresponse\n            ),\n            // Emails load via HTTP Flow\n            Set(\n                gblEmailsResponse,\n                'PowerAppV2->ComposeHTTPRequestURL,SendanHTTPrequest,Compose...'.Run().emaildata\n            )\n        ),\n        // --- Success Telemetry for Concurrent Load ---\n        Collect(\n            colActionTelemetry,\n            {\n                Timestamp: Now(),\n                Action: varActionName,\n                Step: \"Data_Fetch_All_Concurrent\",\n                Status: \"Success\",\n                Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                Message: \"All data sources fetched in parallel\"\n            }\n        ),\n        // --- Error Telemetry for Concurrent Load ---\n        UpdateContext({ locDataError: true });\n        Collect(\n            colActionTelemetry,\n            {\n                Timestamp: Now(),\n                Action: varActionName,\n                Step: \"Data_Fetch_All_Concurrent\",\n                Status: \"Error\",\n                Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                Message: \"Error during one or more parallel flow calls: \" & \"FirstError.Message\"\n            }\n        )\n    );\n    \n    // ===================================================================\n    // --- 4. Parse Flow Responses into Collections ---\n    // ===================================================================\n    // Only proceed if the data fetch was successful\n    If(\n        !locDataError,\n        Set(varStepStart, Now());\n        IfError(\n            // 4a. Parse Docs\n            ClearCollect(\n                colDocsTracking,\n                ForAll(\n                    Table(ParseJSON(gblDocsResponse.responsedata)) As jsonItem,\n                    {\n                        ID: Value(Text(jsonItem.Value.ID)),\n                        Title: If(IsBlank(Text(jsonItem.Value.Title)), \"\", Text(jsonItem.Value.Title)),\n                        Description: If(IsBlank(Text(jsonItem.Value.Description)), \"\", Text(jsonItem.Value.Description)),\n                        Category: If(IsBlank(Text(jsonItem.Value.Category0)), \"\", Text(jsonItem.Value.Category0)),\n                        AssignedTo: If(IsBlank(Text(jsonItem.Value.AssignedTo)), \"\", Text(jsonItem.Value.AssignedTo)),\n                        Status: If(IsBlank(Text(jsonItem.Value.Status)), \"\", Text(jsonItem.Value.Status)),\n                        StartDate: If(IsBlank(Text(jsonItem.Value.StartDate)) || IsError(DateTimeValue(Text(jsonItem.Value.StartDate))), Blank(), DateTimeValue(Text(jsonItem.Value.StartDate))),\n                        Created: If(IsBlank(Text(jsonItem.Value.Created)) || IsError(DateTimeValue(Text(jsonItem.Value.Created))), Blank(), DateTimeValue(Text(jsonItem.Value.Created))),\n                        AuthorName: If(!IsBlank(Text(jsonItem.Value.Author)) && !IsBlank(Text(jsonItem.Value.Author.Title)), Text(jsonItem.Value.Author.Title), \"\"),\n                        AuthorEmail: If(!IsBlank(Text(jsonItem.Value.Author)) && !IsBlank(Text(jsonItem.Value.Author.EMail)), Text(jsonItem.Value.Author.EMail), \"\"),\n                        EditorName: If(!IsBlank(Text(jsonItem.Value.Editor)) && !IsBlank(Text(jsonItem.Value.Editor.Title)), Text(jsonItem.Value.Editor.Title), \"\"),\n                        EditorEmail: If(!IsBlank(Text(jsonItem.Value.Editor)) && !IsBlank(Text(jsonItem.Value.Editor.EMail)), Text(jsonItem.Value.Editor.EMail), \"\")\n                    }\n                )\n            );\n            // 4b. Parse Tasks\n            ClearCollect(\n                colTasksTracking,\n                ForAll(\n                    Table(ParseJSON(gblTasksResponse)),\n                    {\n                        ID: Value(Text(Value.ID)),\n                        Title: If(IsBlank(Text(Value.Title)), \"\", Text(Value.Title)),\n                        Description: If(IsBlank(Text(Value.Description)), \"\", Text(Value.Description)),\n                        Status: If(IsBlank(Text(Value.Progress)), \"\", Text(Value.Progress)),\n                        Priority: If(IsBlank(Text(Value.Priority)), \"\", Text(Value.Priority)),\n                        StartDate: If(IsBlank(Text(Value.StartDate)) || IsError(DateTimeValue(Text(Value.StartDate))), Blank(), DateTimeValue(Text(Value.StartDate))),\n                        DueDate: If(IsBlank(Text(Value.DueDate)) || IsError(DateTimeValue(Text(Value.DueDate))), Blank(), DateTimeValue(Text(Value.DueDate))),\n                        AssignedTo: If(IsBlank(Text(Value.AssignedTo)), \"\", Text(Value.AssignedTo)),\n                        AuthorName: If(!IsBlank(Text(Value.Author)) && !IsBlank(Text(Value.Author.Title)), Text(Value.Author.Title), \"\"),\n                        EditorEmail: If(!IsBlank(Text(Value.Editor)) && !IsBlank(Text(Value.Editor.EMail)), Text(Value.Editor.EMail), \"\"),\n                        RefIDTitle: If(!IsBlank(Text(Value.RefID)) && !IsBlank(Text(Value.RefID.Title)), Text(Value.RefID.Title), \"\"),\n                        GDBLookUpTitle: If(!IsBlank(Text(Value.GBDLookUp)) && !IsBlank(Text(Value.GBDLookUp.Title)), Text(Value.GBDLookUp.Title), \"\"),\n                        RoutedToDSU: If(IsBlank(Text(Value.GDSUROUT)), \"\", Text(Value.GDSUROUT))\n                    }\n                )\n            );\n            // 4c. Parse Emails\n            ClearCollect(\n                colEmailsTracking,\n                ForAll(\n                    Table(ParseJSON(gblEmailsResponse)),\n                    {\n                        id: If(IsBlank(ThisRecord.Value.id), \"\", Text(ThisRecord.Value.id)),\n                        Subject: If(IsBlank(ThisRecord.Value.subject), \"\", Text(ThisRecord.Value.subject)),\n                        Body: If(IsBlank(ThisRecord.Value.body), \"\", Text(ThisRecord.Value.body)),\n                        Importance: If(IsBlank(ThisRecord.Value.importance), \"\", Text(ThisRecord.Value.importance)),\n                        DateTimeReceived: If(IsBlank(ThisRecord.Value.receivedDateTime) || IsError(DateTimeValue(Text(ThisRecord.Value.receivedDateTime))), Blank(), DateTimeValue(Text(ThisRecord.Value.receivedDateTime))),\n                        From: If(IsBlank(ThisRecord.Value.from), \"\", Text(ThisRecord.Value.from)),\n                        To: If(IsBlank(ThisRecord.Value.toRecipients), \"\", Text(ThisRecord.Value.toRecipients)),\n                        Cc: If(IsBlank(ThisRecord.Value.ccRecipients), \"\", Text(ThisRecord.Value.ccRecipients)),\n                        Bcc: If(IsBlank(ThisRecord.Value.bccRecipients), \"\", Text(ThisRecord.Value.bccRecipients)),\n                        internetMessageId: If(IsBlank(ThisRecord.Value.internetMessageId), \"\", Text(ThisRecord.Value.internetMessageId)),\n                        conversationId: If(IsBlank(ThisRecord.Value.conversationId), \"\", Text(ThisRecord.Value.conversationId)),\n                        HasAttachments: If(IsBlank(ThisRecord.Value.hasAttachments), false, Boolean(ThisRecord.Value.hasAttachments)),\n                        Attachments: ThisRecord.Value.attachments\n                    }\n                )\n            );\n            \n            // --- Success Telemetry for Parsing ---\n            Collect(\n                colActionTelemetry,\n                {\n                    Timestamp: Now(),\n                    Action: varActionName,\n                    Step: \"Data_Parse_All\",\n                    Status: \"Success\",\n                    Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                    Message: \"Docs: \" & CountRows(colDocsTracking) & \", Tasks: \" & CountRows(colTasksTracking) & \", Emails: \" & CountRows(colEmailsTracking)\n                }\n            ),\n            // --- Error Telemetry for Parsing ---\n            UpdateContext({ locDataError: true });\n            Collect(\n                colActionTelemetry,\n                {\n                    Timestamp: Now(),\n                    Action: varActionName,\n                    Step: \"Data_Parse_All\",\n                    Status: \"Error\",\n                    Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                    Message: \"Error parsing JSON responses: \" & FirstError.Message\n                }\n            )\n        )\n    );\n    \n    // ===================================================================\n    // --- 5. Build Main Matrix and Lookups ---\n    // ===================================================================\n    // Only proceed if parsing was successful\n    If(\n        !locDataError,\n        Set(varStepStart, Now());\n        IfError(\n            // 5a. Build main matrix collection\n            ClearCollect(\n                colDocTaskEmailMatrix,\n                ForAll(\n                    colDocsTracking As Doc,\n                    {\n                        Created: Doc.Created,\n                        ID: Doc.ID,\n                        Title: Doc.Title,\n                        Category: Doc.Category,\n                        Status: Doc.Status,\n                        AssignedTo: Doc.AssignedTo,\n                        SharePointLink:  Blank(),\n                        Tasks: Filter(colTasksTracking, RefIDD = Doc.ID),\n                        Responses: Filter(\n                            colEmailsTracking,\n                            Doc.Title in Body||\n                            StartsWith(Subject, Doc.Title) ||  EndsWith(Subject, Doc.Title) ||\n                            !IsBlank(Find(Doc.Title, Subject)) ||\n                            !IsBlank(Find(Doc.Title, Body))\n                        )\n                        // Add Attachments filter here if needed\n                    }\n                )\n            );\n            \n            // 5b. Build lookup collections\n            ClearCollect(colAllCategories, Sort(Distinct(colDocsTracking, Category), Value));\n            ClearCollect(colAllPeople, Sort(Distinct(colDocsTracking, AssignedTo), Value));\n            \n            // 5c. Default selected document\n            If(\n                CountRows(colDocTaskEmailMatrix) > 0,\n                Set(varSelectedDoc, First(colDocTaskEmailMatrix))\n            );\n            \n            // --- Success Telemetry for Data Shaping ---\n            Collect(\n                colActionTelemetry,\n                {\n                    Timestamp: Now(),\n                    Action: varActionName,\n                    Step: \"Data_Shape_Matrix\",\n                    Status: \"Success\",\n                    Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                    Message: \"Matrix and lookups built. Rows: \" & CountRows(colDocTaskEmailMatrix)\n                }\n            ),\n            // --- Error Telemetry for Data Shaping ---\n            UpdateContext({ locDataError: true });\n            Collect(\n                colActionTelemetry,\n                {\n                    Timestamp: Now(),\n                    Action: varActionName,\n                    Step: \"Data_Shape_Matrix\",\n                    Status: \"Error\",\n                    Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                    Message: \"Error building matrix: \" & FirstError.Message\n                }\n            )\n        )\n    ),\n    // --- ELSE: Data is already loaded (Cache Hit) ---\n    Collect(\n        colActionTelemetry,\n        {\n            Timestamp: Now(),\n            Action: varActionName,\n            Step: \"Data_Load_Skipped\",\n            Status: \"Success\",\n            Duration_ms: 0,\n            Message: \"Data already in collections, skipping refresh (Cache Hit).\"\n        }\n    )\n);\n\n// ===================================================================\n// --- 6. Finalize and Telemetry Close-Out ---\n// ===================================================================\nUpdateContext({ locIsLoading: false });\nSet(varActionEnd, Now());\nSet(varActionDuration, DateDiff(varActionStart, varActionEnd, TimeUnit.Milliseconds));\n\nCollect(\n    colActionTelemetry,\n    {\n        Timestamp: varActionEnd,\n        Action: varActionName,\n        Step: \"Action_End\",\n        Status: If(locDataError, \"Error\", \"Success\"),\n        Duration_ms: varActionDuration,\n        Message: \"Total execution time\"\n    }\n);\n\nNotify(\n    \"Matrix screen loaded (\" & Round(varActionDuration / 1000, 2) & \"s)\",\n    If(locDataError, NotificationType.Error, NotificationType.Success)\n);"
+                        PressedFill: =ColorFade(Self.Fill, -25%)
+                        RadiusBottomLeft: =AppSpacing.Radius
+                        RadiusBottomRight: =AppSpacing.Radius
+                        RadiusTopLeft: =AppSpacing.Radius
+                        RadiusTopRight: =AppSpacing.Radius
+                        Size: =8
+                        Text: ="Fetch "
+                        Width: =100
+                  - tabDash_3:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =If(varActiveView = 1, ButtonStyles.Primary.BorderColor, ButtonStyles.Secondary.BorderColor)
+                        Color: =If(varActiveView = 1, ButtonStyles.Primary.Color, ButtonStyles.Secondary.Color)
+                        Fill: =If(varActiveView = 1, ButtonStyles.Primary.Fill, ButtonStyles.Secondary.Fill)
+                        FillPortions: =1
+                        Height: =30
+                        HoverFill: =ColorFade(Self.Fill, -10%)
+                        LayoutMinWidth: =
+                        OnSelect: |
+                          =ClearCollect(
+                              colMatchedDocs,
+                              ForAll(
+                                   colDocsTracking,
+                                  With(
+                                      {matched: Filter(colEmailsTracking, !IsBlank(Find(Title, Subject)) || !IsBlank(Find(Title, Body)))},
+                                      If(
+                                          CountRows(matched) > 0,
+                                          {
+                                              ID: ID,
+                                              Created: StartDate,
+                                              Title: Title,
+                                              Category: Category,
+                                              AssignmentStatus: Status,
+                                              Status: Status,
+                                              AssignedTo: AssignedTo,
+                                              AttachmentLink: "",
+                                              MatchingEmails: matched
+                                          }
+                                      )
+                                  )
+                              )
+                          )
+                          ;
+
+                          ClearCollect(
+                              colDocEmailPairs,
+                              ForAll(
+                                   colDocsTracking,
+                                  With(
+                                      {matched: Filter(colEmailsTracking, !IsBlank(Find(Title, Subject)) || !IsBlank(Find(Title, Body)) )},
+                                      ForAll(
+                                          matched,
+                                          {
+                                              DocID: ID,
+                                              DocTitle: Title,
+                                              DocCategory: Category,
+                                              DocStatus: Status,
+                                              EmailSubject: Subject,
+                                              EmailBody: Body,
+                                              EmailFrom: From,
+                                              EmailReceived: DateTimeReceived
+                                          }
+                                      )
+                                  )
+                              )
+                          )
+                        PressedFill: =ColorFade(Self.Fill, -25%)
+                        RadiusBottomLeft: =AppSpacing.Radius
+                        RadiusBottomRight: =AppSpacing.Radius
+                        RadiusTopLeft: =AppSpacing.Radius
+                        RadiusTopRight: =AppSpacing.Radius
+                        Size: =10
+                        Text: ="Consolidate" & CountRows(colMatchedDocs) & "/" & CountRows(colDocEmailPairs)
+                        Width: =100
+                  - tabDocs_3:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =If(varActiveView = 2, ButtonStyles.Info.BorderColor, ButtonStyles.Secondary.BorderColor)
+                        Color: =If(varActiveView = 2, ButtonStyles.Info.Color, ButtonStyles.Secondary.Color)
+                        Fill: =If(varActiveView = 2, ButtonStyles.Info.Fill, ButtonStyles.Secondary.Fill)
+                        FillPortions: =1
+                        Height: =30
+                        HoverFill: =ColorFade(Self.Fill, -10%)
+                        LayoutMinWidth: =
+                        OnSelect: |+
+                          =// --- Part 1: Show a loading spinner ---
+                          UpdateContext({locIsLoading: true});
+
+                          // --- Part 2: Define your queries (using SharePoint INTERNAL names) ---
+                          // Example for your "EAA ACTIVITY TRACKING" list
+                          Set(
+                              gblSelect,
+                              "ID,Title,Description,Category0,StartDate,Status,AssignmentStatus,AssignedTo,Author/Title,Editor/EMail"
+                          );
+
+                          // Define the person/lookup columns you are expanding in the line above
+                          Set(
+                              gblExpand,
+                              "Author,Editor"
+                          );
+
+                          // Define your OData filter. Leave blank ("") to get all items.
+                          // This example gets all items where the Status is 'Pending' AND the Category is 'Meeting'
+                          Set(
+                              gblFilter,
+                             ""
+                          );
+
+
+                          // --- Assume 'gblFlowResponse' holds the raw output from your flow ---
+                          // Example: Set(gblFlowResponse, YourFlowName.Run({...}));
+                          // Based on your output.txt, gblFlowResponse would look like:
+                          // {
+                          //   itemsjson: "{\"odata.nextLink\":\"...\",\"value\":[{\"Author\":{...},...}]}",
+                          //   itemscount: "100",
+                          //   durationinseconds: "xxx"
+                          // }
+                          Set(
+                                  gblFlowResponse3,
+                                  GetDocsHTTP.Run({
+                                      text: gblSelect,
+                                      text_1: gblExpand,
+                                      text_2: gblFilter
+                                  })
+                              );
+
+                          // --- Part 2: Parse the OUTER JSON string and Extract the 'value' array ---
+                          // 1. Parse the itemsjson STRING into an UntypedObject
+                          Set(
+                              untypedOuterJson,
+                              ParseJSON(gblFlowResponse3.responsedata)
+                          );
+
+                          // 2. Access the 'value' property (which is the array) and convert it to a TABLE
+                          ClearCollect(
+                              colRawJSON,
+                              Table(untypedOuterJson) // <--- Key change: Access the .value property
+                          );
+
+
+                          // --- Part 3: Convert the raw data into a typed collection ---
+                          ClearCollect(
+                              colDocsTracking, // Your final, usable collection
+                              ForAll(
+                                  colRawJSON As jsonItem, // Loop through the raw data from the 'value' array
+                                  {
+                                      // Use Value() for the ID number field
+                                      ID: Value(jsonItem.Value.ID),
+
+                                      // Use Text() for text/choice/person fields, checking for nulls
+                                      Title: If(IsBlank(jsonItem.Value.Title), Blank(), Text(jsonItem.Value.Title)),
+                                      Description: If(IsBlank(jsonItem.Value.Description), Blank(), Text(jsonItem.Value.Description)),
+                                      Category: If(IsBlank(jsonItem.Value.Category0), Blank(), Text(jsonItem.Value.Category0)), // Internal name is Category0
+                                      RefID_Text: If(IsBlank(jsonItem.Value.RefID), Blank(), Text(jsonItem.Value.RefID)), // Appears to be text in the sample
+                                      AssignedTo: If(IsBlank(jsonItem.Value.AssignedTo), Blank(), Text(jsonItem.Value.AssignedTo)),
+                                      Status: If(IsBlank(jsonItem.Value.Status), Blank(), Text(jsonItem.Value.Status)),
+
+                                      AssignmentStatus: If(IsBlank(jsonItem.Value.Status), Blank(), Text(jsonItem.Value.AssignmentStatus)),
+                                      // Use DateTimeValue() for date fields, checking for nulls/blanks
+                                      StartDate: If(IsBlank(jsonItem.Value.StartDate) || IsError(DateTimeValue(Text(jsonItem.Value.StartDate))), Blank(), DateTimeValue(Text(jsonItem.Value.StartDate))),
+                                      Modified: If(IsBlank(jsonItem.Value.Modified) || IsError(DateTimeValue(Text(jsonItem.Value.Modified))), Blank(), DateTimeValue(Text(jsonItem.Value.Modified))),
+                                      Created: If(IsBlank(jsonItem.Value.Created) || IsError(DateTimeValue(Text(jsonItem.Value.Created))), Blank(), DateTimeValue(Text(jsonItem.Value.Created))),
+
+                                      // Accessing expanded person fields (Author/Editor) safely
+                                      AuthorName: If(!IsBlank(jsonItem.Value.Author) && !IsBlank(jsonItem.Value.Author.Title), Text(jsonItem.Value.Author.Title), Blank()),
+                                      AuthorEmail: If(!IsBlank(jsonItem.Value.Author) && !IsBlank(jsonItem.Value.Author.EMail), Text(jsonItem.Value.Author.EMail), Blank()),
+                                      EditorName: If(!IsBlank(jsonItem.Value.Editor) && !IsBlank(jsonItem.Value.Editor.Title), Text(jsonItem.Value.Editor.Title), Blank()),
+                                      EditorEmail: If(!IsBlank(jsonItem.Value.Editor) && !IsBlank(jsonItem.Value.Editor.EMail), Text(jsonItem.Value.Editor.EMail), Blank())
+                                  }
+                              )
+                          );
+
+                          // --- Optional: Hide loading spinner ---
+                          // UpdateContext({locIsLoading: false});
+
+
+                          UpdateContext({locIsLoading: false});
+
+                        PressedFill: =ColorFade(Self.Fill, -25%)
+                        RadiusBottomLeft: =AppSpacing.Radius
+                        RadiusBottomRight: =AppSpacing.Radius
+                        RadiusTopLeft: =AppSpacing.Radius
+                        RadiusTopRight: =AppSpacing.Radius
+                        Size: =10
+                        Text: =" colDocsTracking" &CountRows( colDocsTracking)
+                        Width: =100
+                  - tabTasks_3:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =If(varActiveView = 3, ButtonStyles.AccentTeal.BorderColor, ButtonStyles.Secondary.BorderColor)
+                        Color: =If(varActiveView = 3, ButtonStyles.AccentTeal.Color, ButtonStyles.Secondary.Color)
+                        Fill: =If(varActiveView = 3, ButtonStyles.AccentTeal.Fill, ButtonStyles.Secondary.Fill)
+                        FillPortions: =1
+                        Height: =30
+                        HoverFill: =ColorFade(Self.Fill, -10%)
+                        LayoutMinWidth: =
+                        OnSelect: |
+                          =
+
+
+
+                          // --- 1. Define dynamic query parameters ---
+                          Set(
+                              gblSelect,
+                              "Classification,RefIDD,Reference_ID,ID,Title,Description,Progress,Priority,StartDate,DueDate,AssignedTo,Author/Title,Editor/EMail"
+                          );
+
+                          Set(
+                              gblExpand,
+                              "Author,Editor"
+                          );
+
+                          Set(
+                              gblFilter,
+                              ""
+                          );
+
+
+
+                          // --- 2. Track start time ---
+                          Set(gblStartTime, Now());
+
+
+                          ClearCollect(
+                              colTasksTracking,
+                              ForAll(
+                                  Table(ParseJSON(GetTasksHTTP.Run(
+                                  gblSelect,
+                                  gblExpand,
+                                  gblFilter
+                              ).gbltasksflowresponse)),
+
+                          {
+                              ID: Value(Text(Value.ID)),
+                                RefIDD: Value(Text(Value.RefIDD)),
+                                  Reference_ID: Value(Text(Value.Reference_ID)),
+                              Title: If(IsBlank(Text(Value.Title)), "", Text(Value.Title)),
+                              Description: If(IsBlank(Text(Value.Description)), "", Text(Value.Description)),
+                              Status: If(IsBlank(Text(Value.Progress)), "", Text(Value.Progress)),
+                              Priority: If(IsBlank(Text(Value.Priority)), "", Text(Value.Priority)),
+                              StartDate: If(IsBlank(Text(Value.StartDate)) || IsError(DateTimeValue(Text(Value.StartDate))), Blank(), DateTimeValue(Text(Value.StartDate))),
+                              DueDate: If(IsBlank(Text(Value.DueDate)) || IsError(DateTimeValue(Text(Value.DueDate))), Blank(), DateTimeValue(Text(Value.DueDate))),
+                              AssignedTo: If(IsBlank(Text(Value.AssignedTo)), "", Text(Value.AssignedTo)),
+                              AuthorName: If(!IsBlank(Text(Value.Author)) && !IsBlank(Text(Value.Author.Title)), Text(Value.Author.Title), ""),
+                              EditorEmail: If(!IsBlank(Text(Value.Editor)) && !IsBlank(Text(Value.Editor.EMail)), Text(Value.Editor.EMail), ""),
+                              RefIDTitle: If(!IsBlank(Text(Value.RefID)) && !IsBlank(Text(Value.RefID.Title)), Text(Value.RefID.Title), ""),
+                              GDBLookUpTitle: If(!IsBlank(Text(Value.GBDLookUp)) && !IsBlank(Text(Value.GBDLookUp.Title)), Text(Value.GBDLookUp.Title), ""),
+                              RoutedToDSU: If(IsBlank(Text(Value.GDSUROUT)), "", Text(Value.GDSUROUT))
+                          }
+
+                              )
+                          );
+
+                          // --- 4. Track end time and calculate duration ---
+                          Set(gblEndTime, Now());
+                          Set(gblLastRunDuration, DateDiff(gblStartTime, gblEndTime, TimeUnit.Seconds));
+
+
+                          Set(gblLastRunCount, CountRows(colRawJSON));
+                        PressedFill: =ColorFade(Self.Fill, -25%)
+                        RadiusBottomLeft: =AppSpacing.Radius
+                        RadiusBottomRight: =AppSpacing.Radius
+                        RadiusTopLeft: =AppSpacing.Radius
+                        RadiusTopRight: =AppSpacing.Radius
+                        Size: =10
+                        Text: ="colTasksTracking"&CountRows(colTasksTracking)
+                        Width: =100
+                  - tabTasks_5:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =If(varActiveView = 3, ButtonStyles.AccentTeal.BorderColor, ButtonStyles.Secondary.BorderColor)
+                        Color: =If(varActiveView = 3, ButtonStyles.AccentTeal.Color, ButtonStyles.Secondary.Color)
+                        Fill: =If(varActiveView = 3, ButtonStyles.AccentTeal.Fill, ButtonStyles.Secondary.Fill)
+                        FillPortions: =1
+                        Height: =30
+                        HoverFill: =ColorFade(Self.Fill, -10%)
+                        LayoutMinWidth: =
+                        OnSelect: |-
+                          =
+                          ClearCollect(
+                              colEmailsTracking,
+                              ForAll(
+                                  Table(ParseJSON('PowerAppV2->ComposeHTTPRequestURL,SendanHTTPrequest,Compose...'.Run().emaildata)),
+                                {
+                                  id: Text(ThisRecord.Value.id),
+                                  Subject: Text(ThisRecord.Value.subject),
+                                  Body: Text(ThisRecord.Value.body),
+                                  Importance: Text(ThisRecord.Value.importance),
+                                  DateTimeReceived: DateTimeValue(ThisRecord.Value.receivedDateTime),
+                                  From: Text(ThisRecord.Value.from),
+                                  To: Text(ThisRecord.Value.toRecipients),
+                                  Cc: Text(ThisRecord.Value.ccRecipients),
+                                  Bcc: Text(ThisRecord.Value.bccRecipients),
+                                  internetMessageId: Text(ThisRecord.Value.internetMessageId),
+                                  conversationId: Text(ThisRecord.Value.conversationId),
+                                  HasAttachments: Boolean(ThisRecord.Value.hasAttachments),
+                                  Attachments: ThisRecord.Value.attachments
+                                }
+                              )
+                          )
+                        PressedFill: =ColorFade(Self.Fill, -25%)
+                        RadiusBottomLeft: =AppSpacing.Radius
+                        RadiusBottomRight: =AppSpacing.Radius
+                        RadiusTopLeft: =AppSpacing.Radius
+                        RadiusTopRight: =AppSpacing.Radius
+                        Size: =10
+                        Text: |-
+                          ="colEmailsTracking:    "&CountRows(colEmailsTracking)
+                        Width: =100
+                  - Toggle2:
+                      Control: Classic/Toggle@2.1.0
+                      Properties:
+                        FillPortions: =1
+                        LayoutMinWidth: =
+                        Visible: =false
+                        Width: =100
+            - cntBody_3:
+                Control: GroupContainer@1.3.0
+                Variant: AutoLayout
+                Properties:
+                  Fill: =AppTheme_Default.PrimaryBackground
+                  LayoutAlignItems: =LayoutAlignItems.Stretch
+                  LayoutDirection: =If(App.Width <= BreakpointMedium, LayoutDirection.Vertical, LayoutDirection.Horizontal)
+                  LayoutGap: =AppSpacing.M
+                  LayoutJustifyContent: =LayoutJustifyContent.SpaceBetween
+                  PaddingBottom: =AppSpacing.M
+                  PaddingLeft: =AppSpacing.M
+                  PaddingRight: =AppSpacing.M
+                  PaddingTop: =AppSpacing.M
+                  Width: =Parent.Width
+                Children:
+                  - cntNav_2:
+                      Control: GroupContainer@1.3.0
+                      Variant: AutoLayout
+                      Properties:
+                        AlignInContainer: =AlignInContainer.SetByContainer
+                        Fill: =AppTheme_Default.SecondaryBackground
+                        LayoutAlignItems: =LayoutAlignItems.Stretch
+                        LayoutDirection: =LayoutDirection.Vertical
+                        LayoutGap: =AppSpacing.S
+                        LayoutMinHeight: =
+                        LayoutMinWidth: =
+                        PaddingBottom: =AppSpacing.M
+                        PaddingLeft: =AppSpacing.M
+                        PaddingRight: =AppSpacing.M
+                        PaddingTop: =AppSpacing.M
+                        Visible: =showNav=true
+                        Width: =If(App.Width <= BreakpointMedium, Parent.Width, 280)
+                      Children:
+                        - lblNavTitle_2:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =AppTheme.NeutralSecondary
+                              Font: =LookUp(TextStyles, Name="Caption").Font
+                              Height: =24
+                              LayoutMinWidth: =
+                              Size: =LookUp(TextStyles, Name="Caption").Size
+                              Text: ="Quick Access"
+                        - sepLine_2:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              Fill: =AppTheme_Default.NeutralLight
+                              Height: =1
+                              LayoutMinWidth: =
+                              Width: =Parent.Width - (2*AppSpacing.M)
+                        - lblPerf_2:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =AppTheme.NeutralSecondary
+                              Font: =LookUp(TextStyles, Name="Caption").Font
+                              Height: =24
+                              LayoutMinWidth: =
+                              Size: =LookUp(TextStyles, Name="Caption").Size
+                              Text: =Concatenate("Loaded ", CountRows(colDocsTracking), " docs, ", CountRows(colTasksTracking), " tasks, ", CountRows(colEmailsTracking), " emails.")
+                        - gal_Actions_6:
+                            Control: Gallery@2.15.0
+                            Variant: BrowseLayout_Vertical_TwoTextOneImageVariant_ver5.0
+                            Properties:
+                              Fill: =AppTheme.SecondaryBackground
+                              Height: =Parent.Height
+                              Items: =colActions
+                              LayoutMinHeight: =
+                              LayoutMinWidth: =
+                              OnSelect: "=// --- 1. Performance Tracking & Loading ---\n// Set loading state and track start time at the very beginning.\nSet(varActionStart, Now());\nSet(varActionName, ThisItem.Label);\nUpdateContext({locIsLoading: true, locDataError: false});\n\n// Clear log for this run and add start entry\nClear(colActionTelemetry); \nCollect(\n    colActionTelemetry,\n    {\n        Timestamp: varActionStart,\n        Action: varActionName,\n        Step: \"Action_Start\",\n        Status: \"Started\",\n        Duration_ms: 0,\n        Message: \"\"\n    }\n);\n\n// --- 2. Dashboard Action (Optimized) ---\n// This action *only* recalculates the dashboard from existing collections.\nIf(ThisItem.ActionKey = \"Dashboard\",\n    Set(varStepStart, Now()); // Start step timer\n    IfError(\n        // --- Main Logic (Argument 1) ---\n        Clear(colMatchedDocs);\n        Clear(colDocEmailPairs);\n        \n        // PERFORMANCE OPTIMIZATION: Retained from new version\n        ForAll(\n            colDocsTracking,\n            With(\n                { \n                    // Filter emails *once* for the current doc\n                    matchedEmails: Filter(\n                        colEmailsTracking, \n                        !IsBlank(Find(Title, Subject)) || !IsBlank(Find(Title, Body))\n                    ) \n                },\n                \n                // 1. Populate colMatchedDocs (grouped) if matches were found\n                If(\n                    CountRows(matchedEmails) > 0,\n                    Collect(\n                        colMatchedDocs,\n                        {\n                            ID: ID,\n                            Created: StartDate,\n                            Title: Title,\n                            Category: Category,\n                            AssignmentStatus: Status,\n                            Status: Status,\n                            AssignedTo: AssignedTo,\n                            AttachmentLink: \"\",\n                            MatchingEmails: matchedEmails // Store the full filtered table\n                        }\n                    )\n                );\n                \n                // 2. Populate colDocEmailPairs (flattened) for all matches\n                // This inner ForAll only runs on the *filtered* list, not all emails.\n                Collect(\n                    colDocEmailPairs,\n                    ForAll(\n                        matchedEmails,\n                        {\n                            DocID: colDocsTracking[@ID], // Use parent record's ID\n                            DocTitle: colDocsTracking[@Title],\n                            DocCategory: colDocsTracking[@Category],\n                            DocStatus: colDocsTracking[@Status],\n                            EmailSubject: Subject,\n                            EmailBody: Body,\n                            EmailFrom: From,\n                            EmailReceived: DateTimeReceived\n                        }\n                    )\n                )\n            )\n        );\n        \n        // --- Success Log (Still Argument 1) ---\n        Collect(\n            colActionTelemetry,\n            {\n                Timestamp: Now(),\n                Action: varActionName,\n                Step: \"Dashboard_Recalculate\",\n                Status: \"Success\",\n                Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                Message: \"Matched: \" & CountRows(colMatchedDocs) & \" pairs: \" & CountRows(colDocEmailPairs)\n            }\n        ),\n        \n        // --- Error Log (Argument 2: Fallback) ---\n        UpdateContext({locDataError: true});\n        Collect(\n            colActionTelemetry,\n            {\n                Timestamp: Now(),\n                Action: varActionName,\n                Step: \"Dashboard_Recalculate\",\n                Status: \"Error\",\n                Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                Message: FirstError.Message\n            }\n        )\n    )\n    // Set(varActiveView, 1) // Uncomment and set view number if needed\n);\n\n// --- 3. Docs Action (Handles \"Docs\" and \"ReloadAll\") ---\nIf(ThisItem.ActionKey = \"Docs\" || ThisItem.ActionKey = \"ReloadAll\",\n    Set(varStepStart, Now()); // Start step timer\n    IfError(\n        // --- Argument 1 ---\n        // --- 3a. Define Query ---\n        Set(gblSelect, \"ID,Created,Title,Description,Category0,StartDate,Status,AssignedTo,Author/Title,Editor/EMail,AttachmentLink\");\n        Set(gblExpand, \"Author,Editor\");\n        Set(gblFilter, \"\");\n        \n        // --- 3b. Call Flow ---\n        Set(\n            gblFlowResponse3, \n            GetDocsHTTP.Run({\n                text: gblSelect, \n                text_1: gblExpand, \n                text_2: gblFilter\n            })\n        );\n        \n        // --- 3c. Parse and Load (Optimized & Safe) ---\n        ClearCollect(\n            colDocsTracking,\n            ForAll(\n                Table(ParseJSON(gblFlowResponse3.responsedata)) As jsonItem,\n                {\n                    // SAFETY: Using Text() wrapper on all value access (retained from new version)\n                    ID: Value(Text(jsonItem.Value.ID)), \n                    Title: If(IsBlank(Text(jsonItem.Value.Title)), \"\", Text(jsonItem.Value.Title)),\n                    Description: If(IsBlank(Text(jsonItem.Value.Description)), \"\", Text(jsonItem.Value.Description)),\n                    Category: If(IsBlank(Text(jsonItem.Value.Category0)), \"\", Text(jsonItem.Value.Category0)),\n                    RefID_Text: If(IsBlank(Text(jsonItem.Value.RefID)), \"\", Text(jsonItem.Value.RefID)),\n                    AssignedTo: If(IsBlank(Text(jsonItem.Value.AssignedTo)), \"\", Text(jsonItem.Value.AssignedTo)),\n                    Status: If(IsBlank(Text(jsonItem.Value.Status)), \"\", Text(jsonItem.Value.Status)),\n                    StartDate: If(IsBlank(Text(jsonItem.Value.StartDate)) || IsError(DateTimeValue(Text(jsonItem.Value.StartDate))), Blank(), DateTimeValue(Text(jsonItem.Value.StartDate))),\n                    Modified: If(IsBlank(Text(jsonItem.Value.Modified)) || IsError(DateTimeValue(Text(jsonItem.Value.Modified))), Blank(), DateTimeValue(Text(jsonItem.Value.Modified))),\n                    Created: If(IsBlank(Text(jsonItem.Value.Created)) || IsError(DateTimeValue(Text(jsonItem.Value.Created))), Blank(), DateTimeValue(Text(jsonItem.Value.Created))),\n                    \n                    // SAFETY: Check for blank parent object *before* accessing child properties\n                    AuthorName: If(!IsBlank(Text(jsonItem.Value.Author)) && !IsBlank(Text(jsonItem.Value.Author.Title)), Text(jsonItem.Value.Author.Title), \"\"),\n                    AuthorEmail: If(!IsBlank(Text(jsonItem.Value.Author)) && !IsBlank(Text(jsonItem.Value.Author.EMail)), Text(jsonItem.Value.Author.EMail), \"\"),\n                    EditorName: If(!IsBlank(Text(jsonItem.Value.Editor)) && !IsBlank(Text(jsonItem.Value.Editor.Title)), Text(jsonItem.Value.Editor.Title), \"\"),\n                    EditorEmail: If(!IsBlank(Text(jsonItem.Value.Editor)) && !IsBlank(Text(jsonItem.Value.Editor.EMail)), Text(jsonItem.Value.Editor.EMail), \"\")\n                }\n            )\n        );\n        \n        Set(varActiveView, 2);\n\n        // --- Success Log (Still Argument 1) ---\n        Collect(\n            colActionTelemetry,\n            {\n                Timestamp: Now(),\n                Action: varActionName,\n                Step: \"Docs_Fetch_Parse\",\n                Status: \"Success\",\n                Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                Message: \"Rows: \" & CountRows(colDocsTracking)\n            }\n        ),\n        \n        // --- Error Log (Argument 2: Fallback) ---\n        UpdateContext({locDataError: true});\n        Collect(\n            colActionTelemetry,\n            {\n                Timestamp: Now(),\n                Action: varActionName,\n                Step: \"Docs_Fetch_Parse\",\n                Status: \"Error\",\n                Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                Message: FirstError.Message\n            }\n        )\n    )\n);\n\n// --- 4. Tasks Action (Handles \"Tasks\" and \"ReloadAll\") ---\nIf(ThisItem.ActionKey = \"Tasks\" || ThisItem.ActionKey = \"ReloadAll\",\n    Set(varStepStart, Now()); // Start step timer\n    IfError(\n        // --- Argument 1 ---\n        // --- 4a. Define Query ---\n        Set(gblSelect, \"ID,Created,Title,Description,Progress,Priority,StartDate,DueDate,AssignedTo,Author/Title,Editor/EMail,RefID/Title,GBDLookUp/Title,GDSUROUT\");\n        Set(gblExpand, \"Author,Editor,RefID,GBDLookUp\");\n        Set(gblFilter, \"\");\n        \n        // --- 4b. Call Flow ---\n        Set(gblStartTime, Now()); // Specific timing for this flow (retained from new)\n\nClearCollect(\n    colTasksTracking, // Using correct collection name from new version\n    ForAll(\n        Table(ParseJSON(GetTasksHTTP.Run(\n            gblSelect,\n            gblExpand,\n            gblFilter\n        ).gbltasksflowresponse)),\n        {\n            ID: Value(Text(Value.ID)),\n            Title: If(IsBlank(Text(Value.Title)), \"\", Text(Value.Title)),\n            Description: If(IsBlank(Text(Value.Description)), \"\", Text(Value.Description)),\n            Status: If(IsBlank(Text(Value.Progress)), \"\", Text(Value.Progress)),\n            Priority: If(IsBlank(Text(Value.Priority)), \"\", Text(Value.Priority)),\n            StartDate: If(IsBlank(Text(Value.StartDate)) || IsError(DateTimeValue(Text(Value.StartDate))), Blank(), DateTimeValue(Text(Value.StartDate))),\n            DueDate: If(IsBlank(Text(Value.DueDate)) || IsError(DateTimeValue(Text(Value.DueDate))), Blank(), DateTimeValue(Text(Value.DueDate))),\n            AssignedTo: If(IsBlank(Text(Value.AssignedTo)), \"\", Text(Value.AssignedTo)),\n            AuthorName: If(!IsBlank(Text(Value.Author)) && !IsBlank(Text(Value.Author.Title)), Text(Value.Author.Title), \"\"),\n            EditorEmail: If(!IsBlank(Text(Value.Editor)) && !IsBlank(Text(Value.Editor.EMail)), Text(Value.Editor.EMail), \"\"),\n            RefIDTitle: If(!IsBlank(Text(Value.RefID)) && !IsBlank(Text(Value.RefID.Title)), Text(Value.RefID.Title), \"\"),\n            GDBLookUpTitle: If(!IsBlank(Text(Value.GBDLookUp)) && !IsBlank(Text(Value.GBDLookUp.Title)), Text(Value.GBDLookUp.Title), \"\"),\n            RoutedToDSU: If(IsBlank(Text(Value.GDSUROUT)), \"\", Text(Value.GDSUROUT)) // BUG FIX: Corrected GGDSUROUT\n        }\n    )\n);\n        // --- 4d. Task-Specific Performance ---\n        Set(gblEndTime, Now());\n        Set(gblLastRunDuration, DateDiff(gblStartTime, gblEndTime, TimeUnit.Seconds));\n        Set(gblLastRunCount, CountRows(colTasksTracking));\n        \n        Set(varActiveView, 3);\n        \n        // --- Success Log (Still Argument 1) ---\n        Collect(\n            colActionTelemetry,\n            {\n                Timestamp: Now(),\n                Action: varActionName,\n                Step: \"Tasks_Fetch_Parse\",\n                Status: \"Success\",\n                Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                Message: \"Rows: \" & gblLastRunCount\n            }\n        ),\n        \n        // --- Error Log (Argument 2: Fallback) ---\n        UpdateContext({locDataError: true});\n        Collect(\n            colActionTelemetry,\n            {\n                Timestamp: Now(),\n                Action: varActionName,\n                Step: \"Tasks_Fetch_Parse\",\n                Status: \"Error\",\n                Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                Message: FirstError.Message\n            }\n        )\n    )\n);\n\n// --- 5. Emails Action (Handles \"Emails\" and \"ReloadAll\") ---\n// REFRESH STRATEGY: This now also runs on \"ReloadAll\".\nIf(ThisItem.ActionKey = \"Emails\" || ThisItem.ActionKey = \"ReloadAll\",\n    Set(varStepStart, Now()); // Start step timer\n    IfError(\n        // --- Main Logic (Argument 1) ---\n        ClearCollect(\n            colEmailsTracking,\n            ForAll(\n                Table(ParseJSON('PowerAppV2->ComposeHTTPRequestURL,SendanHTTPrequest,Compose...'.Run().emaildata)),\n                {\n                    // Using more robust parsing from old version\n                    id: If(IsBlank(ThisRecord.Value.id), \"\", Text(ThisRecord.Value.id)),\n                    Subject: If(IsBlank(ThisRecord.Value.subject), \"\", Text(ThisRecord.Value.subject)),\n                    Body: If(IsBlank(ThisRecord.Value.body), \"\", Text(ThisRecord.Value.body)),\n                    Importance: If(IsBlank(ThisRecord.Value.importance), \"\", Text(ThisRecord.Value.importance)),\n                    DateTimeReceived: If(IsBlank(ThisRecord.Value.receivedDateTime) || IsError(DateTimeValue(Text(ThisRecord.Value.receivedDateTime))), Blank(), DateTimeValue(Text(ThisRecord.Value.receivedDateTime))),\n                    From: If(IsBlank(ThisRecord.Value.from), \"\", Text(ThisRecord.Value.from)),\n                    To: If(IsBlank(ThisRecord.Value.toRecipients), \"\", Text(ThisRecord.Value.toRecipients)),\n                    Cc: If(IsBlank(ThisRecord.Value.ccRecipients), \"\", Text(ThisRecord.Value.ccRecipients)),\n                    Bcc: If(IsBlank(ThisRecord.Value.bccRecipients), \"\", Text(ThisRecord.Value.bccRecipients)),\n                    internetMessageId: If(IsBlank(ThisRecord.Value.internetMessageId), \"\", Text(ThisRecord.Value.internetMessageId)),\n                    conversationId: If(IsBlank(ThisRecord.Value.conversationId), \"\", Text(ThisRecord.Value.conversationId)),\n                    HasAttachments: If(IsBlank(ThisRecord.Value.hasAttachments), false, Boolean(ThisRecord.Value.hasAttachments)),\n                    Attachments: ThisRecord.Value.attachments\n                }\n            )\n        );\n        \n        Set(varActiveView, 4);\n\n        // --- Success Log (Still Argument 1) ---\n        Collect(\n            colActionTelemetry,\n            {\n                Timestamp: Now(),\n                Action: varActionName,\n                Step: \"Emails_Fetch_Parse\",\n                Status: \"Success\",\n                Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                Message: \"Rows: \" & CountRows(colEmailsTracking)\n            }\n        ),\n        \n        // --- Error Log (Argument 2: Fallback) ---\n        UpdateContext({locDataError: true});\n        Collect(\n            colActionTelemetry,\n            {\n                Timestamp: Now(),\n                Action: varActionName,\n                Step: \"Emails_Fetch_Parse\",\n                Status: \"Error\",\n                Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                Message: FirstError.Message\n            }\n        )\n    )\n);\n\n// --- 6. Recalculate Dashboard on ReloadAll ---\n// REFRESH STRATEGY: This new block runs *only* for \"ReloadAll\".\nIf(ThisItem.ActionKey = \"ReloadAll\",\n    Set(varStepStart, Now()); // Start step timer\n    IfError(\n        // --- Main Logic (Argument 1) ---\n        Clear(colMatchedDocs);\n        Clear(colDocEmailPairs);\n        \n        ForAll(\n            colDocsTracking,\n            With(\n                { \n                    matchedEmails: Filter(\n                        colEmailsTracking, \n                        !IsBlank(Find(Title, Subject)) || !IsBlank(Find(Title, Body))\n                    ) \n                },\n                \n                If(\n                    CountRows(matchedEmails) > 0,\n                    Collect(\n                        colMatchedDocs,\n                        {\n                            ID: ID,\n                            Created: StartDate,\n                            Title: Title,\n                            Category: Category,\n                            AssignmentStatus: Status,\n                            Status: Status,\n                            AssignedTo: AssignedTo,\n                            AttachmentLink: \"\",\n                            MatchingEmails: matchedEmails\n                        }\n                    )\n                );\n                \n                Collect(\n                    colDocEmailPairs,\n                    ForAll(\n                        matchedEmails,\n                        {\n                            DocID: colDocsTracking[@ID],\n                            DocTitle: colDocsTracking[@Title],\n                            DocCategory: colDocsTracking[@Category],\n                            DocStatus: colDocsTracking[@Status],\n                            EmailSubject: Subject,\n                            EmailBody: Body,\n                            EmailFrom: From,\n                            EmailReceived: DateTimeReceived\n                        }\n                    )\n                )\n            )\n        );\n\n        // --- Success Log (Still Argument 1) ---\n        Collect(\n            colActionTelemetry,\n            {\n                Timestamp: Now(),\n                Action: varActionName,\n                Step: \"ReloadAll_Recalculate\",\n                Status: \"Success\",\n                Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                Message: \"Matched: \" & CountRows(colMatchedDocs) & \" pairs: \" & CountRows(colDocEmailPairs)\n            }\n        ),\n        \n        // --- Error Log (Argument 2: Fallback) ---\n        UpdateContext({locDataError: true});\n        Collect(\n            colActionTelemetry,\n            {\n                Timestamp: Now(),\n                Action: varActionName,\n                Step: \"ReloadAll_Recalculate\",\n                Status: \"Error\",\n                Duration_ms: DateDiff(varStepStart, Now(), TimeUnit.Milliseconds),\n                Message: FirstError.Message\n            }\n        )\n    )\n    // Set(varActiveView, 1) // Optionally, force the view back to the Dashboard\n);\n\n\n// --- 7. Handle Default Case ---\n// This block handles any ActionKey that doesn't match the If-statements above.\nIf(\n    !(ThisItem.ActionKey in [\"Dashboard\", \"Docs\", \"Tasks\", \"Emails\", \"ReloadAll\"]),\n    Notify(\n        \"Action not implemented: \" & ThisItem.ActionKey,\n        NotificationType.Warning\n    );\n    \n    // --- Telemetry Log ---\n    Collect(\n        colActionTelemetry,\n        {\n            Timestamp: Now(),\n            Action: varActionName,\n            Step: \"Action_Not_Implemented\",\n            Status: \"Warning\",\n            Duration_ms: 0,\n            Message: \"Key: \" & ThisItem.ActionKey\n        }\n    )\n);\n\n// --- 8. Finalize ---\n// Set loading to false and calculate total duration\nUpdateContext({locIsLoading: false});\nSet(varActionEnd, Now());\nSet(\n    varActionDuration, \n    DateDiff(varActionStart, varActionEnd, TimeUnit.Milliseconds)\n);\n\n// --- Telemetry Log ---\nCollect(\n    colActionTelemetry,\n    {\n        Timestamp: varActionEnd,\n        Action: varActionName,\n        Step: \"Action_End\",\n        Status: If(locDataError, \"Error\", \"Success\"),\n        Duration_ms: varActionDuration,\n        Message: \"Total execution time\"\n    }\n);"
+                              TemplatePadding: =AppSpacing.M
+                              TemplateSize: =RoundDown(68 * TextScale,0)
+                              Width: =Parent.Width
+                              WrapCount: =0
+                            Children:
+                              - btn_Action_10:
+                                  Control: Classic/Button@2.2.0
+                                  Properties:
+                                    Align: =Align.Left
+                                    BorderColor: =ThisItem.Style.BorderColor
+                                    BorderThickness: =0
+                                    Color: =ThisItem.Style.Color
+                                    Fill: =ThisItem.Style.Fill
+                                    Font: =AppTheme.Fonts.Default
+                                    Height: =RoundDown(56 * TextScale,0)
+                                    HoverFill: =ColorFade(ThisItem.Style.Fill, -10%)
+                                    OnSelect: =Select(Parent)
+                                    PaddingLeft: =AppSpacing.XS+ AppSpacing.M  // Make space for the icon
+                                    RadiusBottomLeft: =AppSpacing.Radius
+                                    RadiusBottomRight: =AppSpacing.Radius
+                                    RadiusTopLeft: =AppSpacing.Radius
+                                    RadiusTopRight: =AppSpacing.Radius
+                                    Size: =RoundDown(10 * TextScale,0)
+                                    Text: =ThisItem.Label
+                                    Tooltip: =ThisItem.Tooltip
+                                    Width: =Parent.TemplateWidth - AppSpacing.L
+                                    X: =AppSpacing.M / 2 // Center the button horizontally
+                                    Y: =(Parent.TemplateHeight / 2) - (Self.Height / 2) // Center the button vertically
+                              - lbl_Count_7:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Align: =Align.Center
+                                    Color: =AppTheme.White
+                                    Fill: =ColorFade(ThisItem.Style.Fill, -25%)
+                                    Font: =AppTheme.Fonts.Default
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =RoundDown(20 * TextScale,0)
+                                    Size: =RoundDown(9 * TextScale,0)
+                                    Text: =If(!IsBlank(ThisItem.CountLabel), ThisItem.CountLabel, "")
+                                    Visible: =!IsBlank(ThisItem.CountLabel)
+                                    Width: =RoundDown(60 * TextScale,0)
+                                    X: =btn_Action_10.X + btn_Action_10.Width - Self.Width - AppSpacing.S // Align to button's top-right
+                                    Y: =btn_Action_10.Y + AppSpacing.S // Align to button's top-right
+                              - icn_Action_7:
+                                  Control: Classic/Icon@2.5.0
+                                  Properties:
+                                    Color: =AppTheme.White
+                                    Height: =RoundDown(24 * TextScale,0)
+                                    Icon: =ThisItem.Icon
+                                    OnSelect: =Select(Parent)
+                                    Visible: =!(locIsLoading && varActionName=ThisItem.Label) // Hide when loading
+                                    Width: =RoundDown(24 * TextScale,0)
+                                    X: =btn_Action_10.X + AppSpacing.M // Position inside button's left padding
+                                    Y: =(Parent.TemplateHeight / 2) - (Self.Height / 2) // Center vertically
+                              - icn_Spinner_7:
+                                  Control: Classic/Icon@2.5.0
+                                  Properties:
+                                    Color: =AppTheme.AccentBlue
+                                    Height: =RoundDown(24 * TextScale,0) // Match main icon's size
+                                    Icon: =Icon.Reload
+                                    Rotation: =If(Self.Visible, 360, 0)
+                                    Visible: =locIsLoading && varActionName=ThisItem.Label // Show when loading
+                                    Width: =RoundDown(24 * TextScale,0) // Match main icon's size
+                                    X: =btn_Action_10.X + AppSpacing.M // Same position as main icon
+                                    Y: =(Parent.TemplateHeight / 2) - (Self.Height / 2) // Same position as main icon
+                              - lbl_Perf_7:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Align: =Align.Right
+                                    Color: =AppTheme.NeutralSecondary
+                                    Font: =AppTheme.Fonts.Default
+                                    Height: =RoundDown(20 * TextScale,0)
+                                    Size: =RoundDown(8 * TextScale,0)
+                                    Text: |-
+                                      ="Last: " & Coalesce(Text(LookUp(colActionTelemetry, varActionName=ThisItem.Label, Duration_ms), "0.0"), "-") & "s"
+                                    Width: =RoundDown(100 * TextScale,0) // Give it enough space
+                                    X: =btn_Action_10.X + btn_Action_10.Width - Self.Width - AppSpacing.M // Align to button's bottom-right
+                                    Y: =btn_Action_10.Y + btn_Action_10.Height - Self.Height - (AppSpacing.S / 2) // Align to button's bottom-right
+                              - ActionIcon_3:
+                                  Control: Classic/Icon@2.5.0
+                                  Properties:
+                                    Color: =If( ThisItem.ActionKey = "Delete", AppTheme.Error, If(ThisItem.ActionKey= "ToggleWatchlist" And varSelectedEmail.HasAttachments, AppTheme.BrandSecondary, AppTheme.BrandPrimary )) // Color watched icon
+                                    DisabledColor: =AppTheme.NeutralTertiary
+                                    DisplayMode: =If((ThisItem.ActionKey = "MarkRead" Or ThisItem.ActionKey = "MarkUnread" Or ThisItem.ActionKey = "ToggleWatchlist" Or ThisItem.ActionKey = "CreateTask") And IsBlank(varSelectedTask), DisplayMode.Disabled, Parent.DisplayMode)
+                                    Height: =24
+                                    Icon: =ThisItem.Icon
+                                    OnSelect: =Select(Parent)
+                                    Tooltip: =ThisItem.Tooltip
+                                    Width: =24  // <-- Corrected
+                                    X: =(Parent.TemplateWidth / 2) - (Self.Width / 2) // <-- Added
+                                    Y: =5
+                  - cntContent_2:
+                      Control: GroupContainer@1.3.0
+                      Variant: AutoLayout
+                      Properties:
+                        AlignInContainer: =AlignInContainer.SetByContainer
+                        Fill: =AppTheme_Default.PrimaryBackground
+                        Height: =Parent.Height
+                        LayoutAlignItems: =LayoutAlignItems.Stretch
+                        LayoutDirection: =LayoutDirection.Vertical
+                        LayoutGap: =AppSpacing.M
+                        LayoutMinHeight: =
+                        LayoutMinWidth: =
+                        Width: =200
+                      Children:
+                        - lblContentHeader_2:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =AppTheme_Default.PrimaryForeground
+                              Font: =LookUp(TextStyles, Name="Heading3").Font
+                              FontWeight: =LookUp(TextStyles, Name="Heading3").Weight
+                              LayoutMinWidth: =
+                              Size: =LookUp(TextStyles, Name="Heading3").Size
+                              Text: |+
+                                =Switch(
+                                    varActiveView,
+                                    1, "Dashboard Overview",
+                                    2, "Documents Tracking",
+                                    3, "Tasks Tracking",
+                                    4, "Email Correspondence",
+                                    "Workspace")
+
+
+
+
+                        - cntFilters_2:
+                            Control: GroupContainer@1.3.0
+                            Variant: AutoLayout
+                            Properties:
+                              AlignInContainer: =AlignInContainer.SetByContainer
+                              FillPortions: =0
+                              Height: =If(App.Width <= BreakpointSmall, 100, 48)
+                              LayoutAlignItems: =Align.Center
+                              LayoutDirection: =If(App.Width <= BreakpointSmall, LayoutDirection.Vertical, LayoutDirection.Horizontal)
+                              LayoutGap: =AppSpacing.S
+                              LayoutMinWidth: =
+                              Width: =Parent.Width
+                            Children:
+                              - txtSearch_8:
+                                  Control: Classic/TextInput@2.3.2
+                                  Properties:
+                                    BorderColor: =AppTheme_Default.NeutralTertiary
+                                    Default: =""
+                                    Fill: =AppTheme_Default.TextInputFill
+                                    Font: =AppTheme_Default.Fonts.Default
+                                    Height: =34
+                                    HintText: ="Search..."
+                                    OnChange: =
+                                    OnSelect: |-
+                                      =UpdateContext({ varSearchText: Self.Text });
+
+                                      Set(VarFilterText,Self.Text)
+                                    RadiusBottomLeft: =AppSpacing.Radius
+                                    RadiusBottomRight: =AppSpacing.Radius
+                                    RadiusTopLeft: =AppSpacing.Radius
+                                    RadiusTopRight: =AppSpacing.Radius
+                                    Width: =If(App.Width <= BreakpointSmall, Parent.Width-60, Parent.Width*0.4)
+                              - ddFilterCategory_3:
+                                  Control: Classic/DropDown@2.3.1
+                                  Properties:
+                                    BorderColor: =AppTheme_Default.NeutralTertiary
+                                    Default: ="All"
+                                    FillPortions: =1
+                                    Height: =34
+                                    Items: =["All", "Category A", "Category B", "Category C"]
+                                    Items.Value: =Value
+                                    LayoutMinWidth: =
+                                    OnChange: |-
+                                      =UpdateContext({ varDocFilterCategory: Self.Selected.Value })
+                                    Visible: =Parent.Width>750
+                                    Width: =120
+                              - ddSortBy_2:
+                                  Control: Classic/DropDown@2.3.1
+                                  Properties:
+                                    BorderColor: =AppTheme_Default.NeutralTertiary
+                                    Default: ="DateCreated"
+                                    FillPortions: =1
+                                    Height: =34
+                                    Items: =["DateCreated", "Title", "AssignmentStatus"]
+                                    Items.Value: =Value
+                                    LayoutMinWidth: =
+                                    OnChange: |-
+                                      =Switch(
+                                          Self.Selected.Value,
+                                          "Date",
+                                          UpdateContext({varDocSortBy: "Created",varEmailSortBy:"",varTaskSortBy:""});
+                                          ,
+                                          "Title",
+                                          UpdateContext({varDocSortBy: "Title",varEmailSortBy:"SUbject",varTaskSortBy:"Title"});
+
+                                          "",
+                                          "Status",
+                                           UpdateContext({varDocSortBy: "IsRead",varEmailSortBy:"SUbject",varTaskSortBy:"Status"}))
+                                    Visible: =Parent.Width>750
+                                    Width: =140
+                              - ddFilterUser:
+                                  Control: Classic/DropDown@2.3.1
+                                  Properties:
+                                    BorderColor: =AppTheme_Default.NeutralTertiary
+                                    Default: =
+                                    FillPortions: =1
+                                    Height: =34
+                                    Items: =colAllUsers
+                                    Items.Value: =Mail
+                                    LayoutMinWidth: =
+                                    OnChange: |-
+                                      =UpdateContext({
+                                      varEmailFilterFrom:Self.Selected.Mail,varAssignedToFilter:Self.Selected.Mail})
+                                    Visible: =false
+                                    Width: =120
+                              - ddTaskPriority:
+                                  Control: Classic/DropDown@2.3.1
+                                  Properties:
+                                    BorderColor: =AppTheme_Default.NeutralTertiary
+                                    Default: ="DateCreated"
+                                    FillPortions: =1
+                                    Height: =34
+                                    Items: =Choices('Global Tracking Queue'.Priority)
+                                    Items.Value: =Value
+                                    LayoutMinWidth: =
+                                    OnChange: |-
+                                      =
+                                          UpdateContext({varTaskFilterPriority: Self.Selected.Value});
+                                    Visible: =false
+                                    Width: =140
+                              - ddTaskStatus:
+                                  Control: Classic/DropDown@2.3.1
+                                  Properties:
+                                    BorderColor: =AppTheme_Default.NeutralTertiary
+                                    Default: =
+                                    FillPortions: =1
+                                    Height: =34
+                                    Items: =Choices('Global Tracking Queue'.Status)
+                                    Items.Value: =Value
+                                    LayoutMinWidth: =
+                                    OnChange: |-
+                                      =UpdateContext({
+                                       varTaskFilterStatus:Self.Selected.Value})
+                                    Visible: =false
+                                    Width: =120
+                        - cntDataView_2:
+                            Control: GroupContainer@1.3.0
+                            Variant: AutoLayout
+                            Properties:
+                              AlignInContainer: =AlignInContainer.SetByContainer
+                              Height: =Parent.Height - 140
+                              LayoutAlignItems: =LayoutAlignItems.Stretch
+                              LayoutDirection: =LayoutDirection.Vertical
+                              LayoutGap: =AppSpacing.M
+                              LayoutMinWidth: =
+                              Visible: =If(App.Width<=BreakpointLarge,showNav=false,true)
+                              Width: =Parent.Width
+                            Children:
+                              - galDocs_2:
+                                  Control: Gallery@2.15.0
+                                  Variant: Vertical
+                                  Properties:
+                                    AlignInContainer: =AlignInContainer.SetByContainer
+                                    BorderStyle: =BorderStyle.None
+                                    Items: |-
+                                      =SortByColumns(Filter(colDocsTracking,(varDocFilterCategory="All" || Category=varDocFilterCategory) && (IsBlank(varSearchText) || StartsWith(Title, varSearchText))),
+                                          varDocSortBy,If(varSortDir="Descending", SortOrder.Descending, SortOrder.Ascending))
+                                    LayoutMinWidth: =
+                                    OnSelect: |-
+                                      =Set(varSelectedDoc, ThisItem);
+                                      Set(varSelectedDocAttachments, LookUp('DGO DIGITAL OPS',ID=ThisItem.ID,Attachments));
+                                      Set(varFlyoutView, "Doc");
+                                      Set(varFlyoutOpen, true);
+                                    ShowScrollbar: =false
+                                    TemplateSize: =If(App.Width <= BreakpointSmall, 140, 200)
+                                    Visible: =varActiveView=2 || UnifiedView
+                                  Children:
+                                    - Container_DesktopTemplate_14:
+                                        Control: GroupContainer@1.3.0
+                                        Variant: AutoLayout
+                                        Properties:
+                                          BorderColor: =If(ThisItem.Status="Treated", AppTheme.Success, AppTheme.NeutralTertiary)
+                                          BorderThickness: =1
+                                          Fill: =If(ThisItem.IsSelected, ColorFade(AppTheme.BrandPrimary, 90%), AppTheme.SecondaryBackground)
+                                          Height: =Parent.TemplateHeight * 0.98
+                                          LayoutAlignItems: =LayoutAlignItems.Center
+                                          LayoutDirection: =LayoutDirection.Horizontal
+                                          LayoutGap: =AppSpacing.M
+                                          PaddingBottom: =10
+                                          PaddingLeft: =AppSpacing.M
+                                          PaddingRight: =AppSpacing.M
+                                          PaddingTop: =10
+                                          RadiusBottomLeft: =AppSpacing.Radius
+                                          RadiusBottomRight: =AppSpacing.Radius
+                                          RadiusTopLeft: =AppSpacing.Radius
+                                          RadiusTopRight: =AppSpacing.Radius
+                                          Width: =Parent.TemplateWidth
+                                          Y: =3
+                                        Children:
+                                          - Container_DesktopTemplate_15:
+                                              Control: GroupContainer@1.3.0
+                                              Variant: AutoLayout
+                                              Properties:
+                                                Fill: =AppTheme.SecondaryBackground
+                                                Height: =Parent.Height * 0.98
+                                                LayoutAlignItems: =LayoutAlignItems.Stretch
+                                                LayoutDirection: =LayoutDirection.Vertical
+                                                LayoutGap: =AppSpacing.M
+                                                LayoutMinWidth: =Parent.Width*60%
+                                                PaddingBottom: =5
+                                                PaddingLeft: =AppSpacing.M
+                                                PaddingRight: =AppSpacing.M
+                                                PaddingTop: =5
+                                                RadiusBottomLeft: =AppSpacing.Radius
+                                                RadiusBottomRight: =AppSpacing.Radius
+                                                RadiusTopLeft: =AppSpacing.Radius
+                                                RadiusTopRight: =AppSpacing.Radius
+                                              Children:
+                                                - lbl_Title_Desktop_9:
+                                                    Control: Label@2.5.1
+                                                    Properties:
+                                                      AlignInContainer: =AlignInContainer.Stretch
+                                                      Color: =AppTheme.BrandPrimary
+                                                      Font: =LookUp(TextStyles, Name="Heading3").Font
+                                                      FontWeight: =FontWeight.Semibold
+                                                      OnSelect: =Select(galDocs_2)
+                                                      Size: =LookUp(TextStyles, Name="Body").Size
+                                                      Text: =ThisItem.Title
+                                                      VerticalAlign: =VerticalAlign.Top
+                                                - Container_Meta_Desktop_5:
+                                                    Control: GroupContainer@1.3.0
+                                                    Variant: AutoLayout
+                                                    Properties:
+                                                      Height: =Parent.Height * 0.5
+                                                      LayoutAlignItems: =LayoutAlignItems.Center
+                                                      LayoutDirection: =LayoutDirection.Horizontal
+                                                      LayoutGap: =AppSpacing.M
+                                                      Width: =Parent.Width
+                                                    Children:
+                                                      - lbl_Created_Desktop_9:
+                                                          Control: Label@2.5.1
+                                                          Properties:
+                                                            Align: =Align.Center
+                                                            Color: =AppTheme.NeutralPrimary
+                                                            Font: =LookUp(TextStyles, Name="Body").Font
+                                                            FontWeight: =FontWeight.Semibold
+                                                            OnSelect: =Select(galDocs_2)
+                                                            Size: =LookUp(TextStyles, Name="Body").Size
+                                                            Text: =Text(ThisItem.Created, "dd-mm-yyyy")
+                                                      - Meta_Category_11:
+                                                          Control: Label@2.5.1
+                                                          Properties:
+                                                            Color: =If(ThisItem.Status="Treated", AppTheme.Success, AppTheme.NeutralSecondary)
+                                                            Font: =LookUp(TextStyles, Name="Caption").Font
+                                                            OnSelect: =Select(galDocs_2)
+                                                            Size: =LookUp(TextStyles, Name="Caption").Size
+                                                            Text: =Coalesce(ThisItem.Category, "Uncategorized")
+                                                            Visible: =App.Width > 700
+                                                      - lbl_Status_Desktop_9:
+                                                          Control: Label@2.5.1
+                                                          Properties:
+                                                            Align: =Align.Center
+                                                            Color: =If(ThisItem.Status="Treated", AppTheme.Success, AppTheme.Warning)
+                                                            Font: =LookUp(TextStyles, Name="Body").Font
+                                                            OnSelect: =Select(galDocs_2)
+                                                            Size: =LookUp(TextStyles, Name="Body").Size
+                                                            Text: =ThisItem.Status
+                                                            Visible: =Parent.Width > 800
+                                                      - lbl_AssignedTo_Desktop_9:
+                                                          Control: Label@2.5.1
+                                                          Properties:
+                                                            Align: =Align.Center
+                                                            Color: =AppTheme.NeutralSecondary
+                                                            Font: =LookUp(TextStyles, Name="Caption").Font
+                                                            OnSelect: =Select(galDocs_2)
+                                                            Size: =LookUp(TextStyles, Name="Caption").Size
+                                                            Text: =ThisItem.AssignedTo
+                                                            Visible: =Parent.Width > 750 && Or(ThisItem.Status="Assigned", ThisItem.Status="Treated")
+                              - galTasks_4:
+                                  Control: Gallery@2.15.0
+                                  Variant: Vertical
+                                  Properties:
+                                    BorderStyle: =BorderStyle.None
+                                    Items: |-
+                                      =With(
+                                          {
+                                              _term: Lower(VarFilterText), // Ensure case-insensitive search
+                                              _base: colTasksTracking,
+                                              _p: varTaskFilterPriority,
+                                              _s: varTaskFilterStatus,
+                                              _by: varTaskSortBy,
+                                              _dir: varSortDir
+                                          },
+                                          SortByColumns(
+                                              Filter(
+                                                  _base,
+                                                  // --- FIX IS HERE ---
+                                                  IsBlank(_term) || _term in Lower(Title), // Use 'in' operator instead of IsMatch
+                                                  // -------------------
+                                                  _p = "All" || Priority = _p,
+                                                  _s = "All" || Status = _s
+                                              ),
+                                              _by,
+                                              If(_dir = "Descending", SortOrder.Descending, SortOrder.Ascending)
+                                          )
+                                      )
+                                    LayoutMinWidth: =
+                                    OnSelect: |
+                                      =Set(varSelectedTask, ThisItem);
+                                      Set(varFlyoutView, "Task");
+                                      Set(varFlyoutOpen, true)
+                                    ShowScrollbar: =false
+                                    TemplateSize: =If(App.Width <= BreakpointSmall, 84, If(App.Width <= BreakpointMedium, 96, 108))
+                                    Visible: =varActiveView=3 || UnifiedView
+                                  Children:
+                                    - shpPriority_2:
+                                        Control: Rectangle@2.3.0
+                                        Properties:
+                                          Fill: =Switch(ThisItem.Priority, "P1 (Critical)", AppTheme_Default.Error, "P2 (High)", AppTheme_Default.Warning, "P3 (Normal)", AppTheme_Default.BrandSecondary, "P4 (Low)", AppTheme_Default.SubtleGray, AppTheme_Default.SubtleGray)
+                                          Height: =Parent.TemplateHeight - AppSpacing.S
+                                          Width: =8
+                                    - lblTaskMeta_2:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          Color: =AppTheme.NeutralSecondary
+                                          Font: =LookUp(TextStyles, Name="Caption").Font
+                                          Size: =LookUp(TextStyles, Name="Caption").Size
+                                          Text: |-
+                                            ="Priority: " & Coalesce(ThisItem.Priority,"—") & " • Status: " & Coalesce(ThisItem.Status,"—")
+                                          X: =lblTaskTitle_5.X
+                                          Y: =lblTaskTitle_5.Y + lblTaskTitle_5.Height + 2
+                                    - lblTaskTitle_5:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          Color: =AppTheme_Default.NeutralPrimary
+                                          Font: =LookUp(TextStyles, Name="Body").Font
+                                          FontWeight: =FontWeight.Semibold
+                                          Size: =LookUp(TextStyles, Name="Body").Size
+                                          Text: =ThisItem.Title
+                                          Width: =Parent.TemplateWidth - 220
+                                          X: =AppSpacing.M + 8
+                                          Y: =AppSpacing.S
+                              - galEmails_5:
+                                  Control: Gallery@2.15.0
+                                  Variant: Vertical
+                                  Properties:
+                                    BorderStyle: =BorderStyle.None
+                                    Items: =colEmailsTracking
+                                    LayoutMinWidth: =
+                                    OnSelect: |
+                                      =Set(varSelectedEmail, ThisItem);
+                                      Set(varFlyoutView, "Email");
+                                      Set(varFlyoutOpen, true)
+                                    ShowScrollbar: =false
+                                    TemplateSize: =If(App.Width <= BreakpointSmall, 96, If(App.Width <= BreakpointMedium, 110, 120))
+                                    Visible: =varActiveView=4 || UnifiedView
+                                  Children:
+                                    - lblEmailSubject_3:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          Color: =AppTheme_Default.NeutralPrimary
+                                          Font: =LookUp(TextStyles, Name="Body").Font
+                                          FontWeight: =FontWeight.Semibold
+                                          Size: =LookUp(TextStyles, Name="Body").Size
+                                          Text: =ThisItem.DateTimeReceived
+                                          Width: =Parent.TemplateWidth - 2*AppSpacing.M
+                                          X: =AppSpacing.M
+                                          Y: =AppSpacing.S
+                                    - btnOpenEmail_2:
+                                        Control: Classic/Button@2.2.0
+                                        Properties:
+                                          BorderColor: =ButtonStyles.Info.BorderColor
+                                          Color: =ButtonStyles.Info.Color
+                                          Fill: =ButtonStyles.Info.Fill
+                                          Height: =28
+                                          HoverFill: =ColorFade(ButtonStyles.Info.Fill, -10%)
+                                          OnSelect: =Select(Parent)
+                                          Text: ="Open"
+                                          Width: =72
+                                          X: =Parent.TemplateWidth - Self.Width - AppSpacing.M
+                                          Y: =AppSpacing.S
+                                    - lblEmailMeta_2:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          Color: =AppTheme.NeutralSecondary
+                                          Font: =LookUp(TextStyles, Name="Caption").Font
+                                          Size: =LookUp(TextStyles, Name="Caption").Size
+                                          Text: =ThisItem.Subject
+                                          Width: =lblEmailSubject_3.Width
+                                          X: =AppSpacing.M
+                                          Y: =lblEmailSubject_3.Y + lblEmailSubject_3.Height
+                                    - lblEmailPreview_2:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          Color: =AppTheme.NeutralSecondary
+                                          Font: =LookUp(TextStyles, Name="Caption").Font
+                                          Size: =LookUp(TextStyles, Name="Caption").Size
+                                          Text: =ThisItem.Importance
+                                          Width: =lblEmailSubject_3.Width
+                                          X: =AppSpacing.M
+                                          Y: =80
+                              - cnTelemetry:
+                                  Control: GroupContainer@1.3.0
+                                  Variant: AutoLayout
+                                  Properties:
+                                    AlignInContainer: =AlignInContainer.SetByContainer
+                                    Fill: =AppTheme_Default.SecondaryBackground
+                                    LayoutAlignItems: =LayoutAlignItems.Stretch
+                                    LayoutDirection: =LayoutDirection.Vertical
+                                    LayoutGap: =AppSpacing.S
+                                    LayoutMinHeight: =
+                                    LayoutMinWidth: =
+                                    PaddingBottom: =AppSpacing.M
+                                    PaddingLeft: =AppSpacing.M
+                                    PaddingRight: =AppSpacing.M
+                                    PaddingTop: =AppSpacing.M
+                                    Visible: =showNav=true
+                                    Width: =varActiveView=5
+                                  Children:
+                                    - lblTelemetryHeader_2:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          Align: =Align.Center
+                                          AlignInContainer: =AlignInContainer.Stretch
+                                          Color: =LookUp(TextStyles, Name="Heading1").Color
+                                          Font: =LookUp(TextStyles, Name="Heading1").Font
+                                          FontWeight: =LookUp(TextStyles, Name="Heading1").Weight
+                                          Height: =LookUp(TextStyles, Name="Heading1").Size * 3
+                                          Size: =LookUp(TextStyles, Name="Heading1").Size/2
+                                          Text: |-
+                                            ="🧭 Action Telemetry Summary"
+                                          Width: =Parent.Width - (AppSpacing.Padding * 2)
+                                    - cntTelemetrySummary_2:
+                                        Control: GroupContainer@1.3.0
+                                        Variant: AutoLayout
+                                        Properties:
+                                          BorderColor: =AppTheme_Default.NeutralLight
+                                          BorderThickness: =1
+                                          Fill: =AppTheme_Default.SecondaryBackground
+                                          FillPortions: =0
+                                          Height: =AppSpacing.XL * 2
+                                          LayoutDirection: =LayoutDirection.Horizontal
+                                          PaddingLeft: =AppSpacing.M
+                                          PaddingRight: =AppSpacing.M
+                                          RadiusBottomLeft: =AppSpacing.Radius
+                                          RadiusBottomRight: =AppSpacing.Radius
+                                          RadiusTopLeft: =AppSpacing.Radius
+                                          RadiusTopRight: =AppSpacing.Radius
+                                          Width: =Parent.Width - (AppSpacing.Padding * 2)
+                                        Children:
+                                          - lblTelemetryDuration_3:
+                                              Control: Label@2.5.1
+                                              Properties:
+                                                Color: =AppTheme_Default.NeutralPrimary
+                                                Font: =AppStyles.font
+                                                FontWeight: =FontWeight.Semibold
+                                                Size: =LookUp(TextStyles, Name="Body").Size
+                                                Text: ="⏱ " & Round(Sum(colActionTelemetry, Duration_ms)/1000, 2) & "s total"
+                                          - lblTelemetrySuccess_2:
+                                              Control: Label@2.5.1
+                                              Properties:
+                                                Color: =AppTheme_Default.Success
+                                                Font: =AppStyles.font
+                                                FontWeight: =FontWeight.Semibold
+                                                Size: =LookUp(TextStyles, Name="Body").Size
+                                                Text: ="✅ " & CountIf(colActionTelemetry, Status="Success")
+                                          - lblTelemetryErrors_2:
+                                              Control: Label@2.5.1
+                                              Properties:
+                                                Color: =AppTheme_Default.Error
+                                                Font: =AppStyles.font
+                                                FontWeight: =FontWeight.Semibold
+                                                Size: =LookUp(TextStyles, Name="Body").Size
+                                                Text: ="❌ " & CountIf(colActionTelemetry, Status="Error")
+                                    - galTelemetry_2:
+                                        Control: Gallery@2.15.0
+                                        Variant: VariableHeight
+                                        Properties:
+                                          BorderColor: =AppTheme_Default.NeutralLighter
+                                          BorderThickness: =1
+                                          Height: =200
+                                          Items: =Sort(colActionTelemetry, Timestamp, SortOrder.Ascending)
+                                          TemplateFill: =Switch(ThisItem.Status,"Success", ColorFade(AppTheme_Default.Success, 0.8),"Error", ColorFade(AppTheme_Default.Error, 0.8),ColorFade(AppTheme_Default.NeutralLighter, 0.7))
+                                          TemplatePadding: =AppSpacing.S
+                                          TemplateSize: =LookUp(TextStyles, Name="Body").Size * 6
+                                          Width: =Parent.Width - (AppSpacing.Padding * 2)
+                                        Children:
+                                          - lblTelemetryMessage_2:
+                                              Control: Label@2.5.1
+                                              Properties:
+                                                AutoHeight: =true
+                                                Color: =AppTheme.NeutralSecondary
+                                                Font: =AppStyles.font
+                                                Size: =LookUp(TextStyles, Name="Caption").Size
+                                                Text: =ThisItem.Message
+                                                Width: =Parent.Width - (AppSpacing.XL * 3)
+                                                X: =1
+                                                Y: =32
+                                          - lblTelemetryStatusDuration_2:
+                                              Control: Label@2.5.1
+                                              Properties:
+                                                Color: =AppTheme.NeutralSecondary
+                                                Font: =AppStyles.font
+                                                Size: =LookUp(TextStyles, Name="Caption").Size
+                                                Text: =ThisItem.Status & " · " & Text(ThisItem.Duration_ms, "[$-en-US]#,##0") & " ms"
+                                                Y: =32
+                                          - icnTelemetryStatus_2:
+                                              Control: Classic/Icon@2.5.0
+                                              Properties:
+                                                Color: |-
+                                                  =Switch(
+                                                  ThisItem.Status,
+                                                  "Success", AppTheme_Default.Success,
+                                                  "Error", AppTheme_Default.Error,
+                                                  AppTheme_Default.Warning)
+                                                Height: =AppSpacing.XL
+                                                Icon: |-
+                                                  =Switch(
+                                                      ThisItem.Status,
+                                                      "Success", Icon.Check,
+                                                      "Error", Icon.Cancel,
+                                                      Icon.Clock)
+                                                Width: =AppSpacing.XL
+                                                Y: =AppSpacing.S
+                                          - lblTelemetryStep_3:
+                                              Control: Label@2.5.1
+                                              Properties:
+                                                Color: =AppStyles.textColor
+                                                Font: =AppStyles.font
+                                                FontWeight: =FontWeight.Semibold
+                                                Height: =LookUp(TextStyles, Name="Body").Size * 1.4
+                                                Size: =LookUp(TextStyles, Name="Body").Size
+                                                Text: =ThisItem.Step
+                                                Width: =Parent.Width - (icnTelemetryStatus_2.Width + (AppSpacing.S * 4))
+                                                Y: =AppSpacing.S
+                                    - btnTelemetryReload_2:
+                                        Control: Classic/Button@2.2.0
+                                        Properties:
+                                          AlignInContainer: =AlignInContainer.Stretch
+                                          BorderColor: =ButtonStyles.Secondary.BorderColor
+                                          Color: =ButtonStyles.Secondary.Color
+                                          Fill: =ButtonStyles.Secondary.Fill
+                                          Height: =AppSpacing.XL * 1.5
+                                          HoverFill: =ColorFade(Self.Fill, -10%)
+                                          OnSelect: =Select(tabTasks_7)
+                                          PressedFill: =ColorFade(Self.Fill, -20%)
+                                          RadiusBottomLeft: =AppSpacing.Radius
+                                          RadiusBottomRight: =AppSpacing.Radius
+                                          RadiusTopLeft: =AppSpacing.Radius
+                                          RadiusTopRight: =AppSpacing.Radius
+                                          Text: ="Reload Data"
+                                          Width: =Switch(CurrentScreenSize, "Small", 120, "Medium", 140, 160)
+                  - MainContainer1_3:
+                      Control: GroupContainer@1.3.0
+                      Variant: AutoLayout
+                      Properties:
+                        Fill: =RGBA(255, 255, 255, 1)
+                        Height: =726
+                        LayoutDirection: =LayoutDirection.Vertical
+                        LayoutGap: =10
+                        PaddingBottom: =5
+                        RadiusBottomLeft: =8
+                        RadiusBottomRight: =8
+                        RadiusTopLeft: =8
+                        RadiusTopRight: =8
+                        Visible: =false
+                        Width: =Parent.Width
+                      Children:
+                        - BtnDashboard_4:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              AlignInContainer: =AlignInContainer.Stretch
+                              Color: =RGBA(255,255,255,1)
+                              Fill: =AppTheme.BrandPrimary
+                              OnSelect: |+
+                                =Set(varActiveView, 1);
+
+                                ClearCollect(
+                                    colDocTaskEmailMatrix,
+                                    ForAll(
+                                        colDocsTracking,
+                                        With(
+                                            {
+                                                relatedTasks: Filter(colTasksTracking, RefIDD = ID),
+                                                relatedEmails: Filter(
+                                                    colEmailsTracking,
+                                                    !IsBlank(Find(Title, Subject)) || !IsBlank(Find(Title, Body))
+                                                )
+                                            },
+                                            {Created:Created,
+                                                ID: ID,
+                                                Title: Title,
+                                                Category: Category,
+                                                Status: Status,
+                                                AssignedTo: AssignedTo,
+                                                Tasks: relatedTasks,
+                                                Responses: relatedEmails
+                                            }
+                                        )
+                                    )
+                                )
+
+                              RadiusBottomLeft: =8
+                              RadiusBottomRight: =8
+                              RadiusTopLeft: =8
+                              RadiusTopRight: =8
+                              Text: ="Pane2"
+                        - Container19_1:
+                            Control: GroupContainer@1.3.0
+                            Variant: AutoLayout
+                            Properties:
+                              DropShadow: =DropShadow.Bold
+                              Fill: =ColorFade(App.Theme.Colors.Lighter80,.02)
+                              FillPortions: =0
+                              Height: =60
+                              LayoutAlignItems: =LayoutAlignItems.Center
+                              LayoutDirection: =LayoutDirection.Horizontal
+                              LayoutGap: =10
+                              PaddingLeft: =10
+                              PaddingRight: =10
+                              RadiusBottomLeft: =8
+                              RadiusBottomRight: =8
+                              RadiusTopLeft: =8
+                              RadiusTopRight: =8
+                            Children:
+                              - Icon4_1:
+                                  Control: Icon@0.0.7
+                                  Properties:
+                                    Icon: ="Filter"
+                              - DropdownCanvas2:
+                                  Control: DropDown@0.0.45
+                                  Properties:
+                                    FontSize: =18
+                                    Items: =["item 1","Item 2","Item 3"]
+                                    Width: =400
+                                  Children:
+                                    - Value1:
+                                        Control: DropDownDataField@1.5.0
+                                        Variant: textualColumn
+                                        IsLocked: true
+                                        Properties:
+                                          FieldDisplayName: ="Value"
+                                          FieldName: ="Value"
+                                          FieldType: ="s"
+                                          Order: =1
+                              - TabList1:
+                                  Control: TabList@2.2.31
+                                  Properties:
+                                    Alignment: ='TabList.Alignment'.Horizontal
+                                    FontSize: =18
+                                    Items: =["Todos","Aguardando", "Respondido"]
+                                    Size: ='TabList.Size'.Medium
+                                    Width: =360
+                        - Container1_4:
+                            Control: GroupContainer@1.3.0
+                            Variant: AutoLayout
+                            Properties:
+                              BorderStyle: =BorderStyle.None
+                              DropShadow: =DropShadow.None
+                              Fill: =ColorFade(App.Theme.Colors.Lighter80,0.8)
+                              FillPortions: =0
+                              Height: =45
+                              LayoutAlignItems: =LayoutAlignItems.Center
+                              LayoutDirection: =LayoutDirection.Horizontal
+                              LayoutGap: =5
+                              LayoutMinWidth: =100
+                              PaddingLeft: =10
+                              PaddingRight: =10
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                            Children:
+                              - Label4_1:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    FontWeight: =FontWeight.Semibold
+                                    LayoutMinWidth: =100
+                                    Text: ="Sesão"
+                                    Width: =200
+                              - Label4_2:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    FontWeight: =FontWeight.Semibold
+                                    Text: ="ID"
+                                    Width: =60
+                              - Label4_3:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    FillPortions: =3
+                                    FontWeight: =FontWeight.Semibold
+                                    Text: ="Pergunta Checklist"
+                              - Label4_4:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    FillPortions: =3
+                                    FontWeight: =FontWeight.Semibold
+                                    Text: ="Dúvida submetida"
+                              - Label4_7:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Align: =Align.Center
+                                    FontWeight: =FontWeight.Semibold
+                                    LayoutMinWidth: =50
+                                    Text: ="Status"
+                                    Width: =100
+                              - Label4_5:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Align: =Align.Center
+                                    FontWeight: =FontWeight.Semibold
+                                    LayoutMinWidth: =50
+                                    Text: ="Ação"
+                                    Width: =60
+                        - Gallery1_8:
+                            Control: Gallery@2.15.0
+                            Variant: VariableHeight
+                            Properties:
+                              Items: =colMatchedDocs
+                              LayoutMinHeight: =80
+                              NavigationStep: =0
+                              ShowNavigation: =true
+                              ShowScrollbar: =false
+                              TemplateSize: =200
+                              Visible: =Self.AllItemsCount <> 0
+                            Children:
+                              - Container1_5:
+                                  Control: GroupContainer@1.3.0
+                                  Variant: AutoLayout
+                                  Properties:
+                                    BorderStyle: =BorderStyle.None
+                                    DropShadow: =DropShadow.Semilight
+                                    Height: |-
+                                      =//Label4_9.Height + 20
+                                      Max(Label4_13.Height,Label4_14.Height,30) + 10
+                                    LayoutAlignItems: =LayoutAlignItems.Center
+                                    LayoutDirection: =LayoutDirection.Horizontal
+                                    LayoutGap: =5
+                                    PaddingLeft: =5
+                                    PaddingRight: =5
+                                    Width: =Parent.TemplateWidth-5
+                                  Children:
+                                    - Label4_6:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          AlignInContainer: =AlignInContainer.Center
+                                          AutoHeight: =true
+                                          PaddingBottom: =0
+                                          PaddingTop: =0
+                                          Size: =11
+                                          Text: =Text(ThisItem.Created, "DD/MM/YYYY")
+                                          VerticalAlign: =VerticalAlign.Top
+                                          Width: =Label4_1.Width
+                                          X: =Label4_1.X
+                                          Y: =8
+                                    - Label4_12:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          AutoHeight: =true
+                                          PaddingBottom: =0
+                                          PaddingTop: =0
+                                          Size: =11
+                                          Text: =ThisItem.ID
+                                          VerticalAlign: =VerticalAlign.Top
+                                          Width: =Label4_2.Width
+                                          X: =Label4_2.X
+                                          Y: =8
+                                    - Label4_13:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          AlignInContainer: =AlignInContainer.Center
+                                          AutoHeight: =true
+                                          PaddingBottom: =0
+                                          PaddingTop: =0
+                                          Size: =11
+                                          Text: =ThisItem.Title
+                                          Width: =Label4_3.Width
+                                          X: =Label4_2.X
+                                          Y: =8
+                                    - Label4_14:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          AlignInContainer: =AlignInContainer.Center
+                                          AutoHeight: =true
+                                          PaddingBottom: =0
+                                          PaddingTop: =0
+                                          Size: =11
+                                          Text: =ThisItem.Category
+                                          VerticalAlign: =VerticalAlign.Top
+                                          Width: =Label4_4.Width
+                                          X: =Label4_2.X
+                                          Y: =8
+                                    - BadgeCanvas4:
+                                        Control: Badge@0.0.24
+                                        Properties:
+                                          Content: =ThisItem.Status
+                                          ThemeColor: |-
+                                            =Switch(ThisItem.Status,
+                                            "Concluído", 'BadgeCanvas.ThemeColor'.Success,
+                                            "Pendente", 'BadgeCanvas.ThemeColor'.Warning,
+                                            "Cancelado", 'BadgeCanvas.ThemeColor'.Important)
+                                          Width: =Label4_7.Width
+                                    - Icon2_6:
+                                        Control: Classic/Icon@2.5.0
+                                        Properties:
+                                          AlignInContainer: =AlignInContainer.Center
+                                          Height: =60
+                                          Icon: =Icon.View
+                                          LayoutMinHeight: =30
+                                          LayoutMinWidth: =30
+                                          OnSelect: =
+                                          PaddingBottom: =15
+                                          PaddingLeft: =15
+                                          PaddingRight: =15
+                                          PaddingTop: =15
+                                          Width: =60
+                        - Container20_1:
+                            Control: GroupContainer@1.3.0
+                            Variant: AutoLayout
+                            Properties:
+                              DropShadow: =DropShadow.None
+                              LayoutDirection: =LayoutDirection.Vertical
+                              LayoutGap: =10
+                              PaddingBottom: =20
+                              PaddingLeft: =20
+                              PaddingRight: =20
+                              PaddingTop: =20
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Visible: =Gallery1_8.AllItemsCount = 0
+                            Children:
+                              - imgInfoIcon_5:
+                                  Control: Image@2.2.3
+                                  Properties:
+                                    Height: =50
+                                    Image: = "data:image/svg+xml; utf-8, " & EncodeUrl($"<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill={JSON(App.Theme.Colors.Darker30)} class='bi bi-exclamation-octagon' viewBox='0 0 16 16'>  <path d='M4.54.146A.5.5 0 0 1 4.893 0h6.214a.5.5 0 0 1 .353.146l4.394 4.394a.5.5 0 0 1 .146.353v6.214a.5.5 0 0 1-.146.353l-4.394 4.394a.5.5 0 0 1-.353.146H4.893a.5.5 0 0 1-.353-.146L.146 11.46A.5.5 0 0 1 0 11.107V4.893a.5.5 0 0 1 .146-.353zM5.1 1 1 5.1v5.8L5.1 15h5.8l4.1-4.1V5.1L10.9 1z'/>  <path d='M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z'/></svg>")
+                                    OnSelect: =
+                                    Width: =50
+                                    X: =60
+                                    Y: =60
+                              - TextCanvas10:
+                                  Control: Text@0.0.51
+                                  Properties:
+                                    Align: ='TextCanvas.Align'.Center
+                                    AlignInContainer: =AlignInContainer.Stretch
+                                    Height: =150
+                                    Size: =30
+                                    Text: ="Não há questões com esses filtros"
+                                    VerticalAlign: =Align.Justify
+                                    Weight: ='TextCanvas.Weight'.Semibold
+      - cntLoading_2:
+          Control: GroupContainer@1.3.0
+          Variant: AutoLayout
+          Properties:
+            Fill: =RGBA(0,0,0,0.25)
+            Height: =App.Height
+            LayoutAlignItems: =Align.Center
+            LayoutDirection: =LayoutDirection.Vertical
+            LayoutJustifyContent: =LayoutJustifyContent.Center
+            Visible: =locIsLoading
+            Width: =App.Width
+          Children:
+            - icoSpinner_2:
+                Control: Classic/Icon@2.5.0
+                Properties:
+                  Color: =AppTheme_Default.White
+                  Icon: =Icon.Reload
+            - lblLoading_2:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  Color: =AppTheme_Default.White
+                  Font: =LookUp(TextStyles, Name="Body").Font
+                  FontWeight: =FontWeight.Semibold
+                  Size: =LookUp(TextStyles, Name="Body").Size
+                  Text: ="Loading... Please wait."
+      - flyOverlay_2:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =Color.Transparent
+            Fill: =RGBA(0,0,0,0.35)
+            Height: =App.Height
+            OnSelect: =Set(varFlyoutOpen, false)
+            Visible: =varFlyoutOpen
+            Width: =App.Width
+      - flyPanel_2:
+          Control: GroupContainer@1.3.0
+          Variant: AutoLayout
+          Properties:
+            Fill: =AppTheme_Default.PrimaryBackground
+            Height: =App.Height
+            LayoutDirection: =LayoutDirection.Vertical
+            LayoutGap: =AppSpacing.S
+            PaddingBottom: =AppSpacing.M
+            PaddingLeft: =AppSpacing.M
+            PaddingRight: =AppSpacing.M
+            PaddingTop: =AppSpacing.M
+            Visible: =varFlyoutOpen
+            Width: |-
+              =With({ _w: App.Width * 0.32 }, Max(360, Min(560, _w)) )
+            X: =App.Width - Self.Width
+          Children:
+            - flyHeader_2:
+                Control: GroupContainer@1.3.0
+                Variant: AutoLayout
+                Properties:
+                  Fill: =AppTheme_Default.SecondaryBackground
+                  FillPortions: =0
+                  Height: =If(App.Width <= BreakpointMedium, 56, 64)
+                  LayoutAlignItems: =Align.Center
+                  LayoutDirection: =LayoutDirection.Horizontal
+                  LayoutJustifyContent: =LayoutJustifyContent.SpaceBetween
+                  PaddingLeft: =AppSpacing.M
+                  PaddingRight: =AppSpacing.M
+                Children:
+                  - flyTitle_2:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =AppTheme_Default.PrimaryForeground
+                        Font: =LookUp(TextStyles, Name="Heading3").Font
+                        FontWeight: =LookUp(TextStyles, Name="Heading3").Weight
+                        Size: =LookUp(TextStyles, Name="Heading3").Size
+                        Text: =Switch(varFlyoutView, "Doc", Coalesce(varSelectedDoc.Title, "Document"), "Email", Coalesce(varSelectedEmail.Subject, "Email"), "Task", Coalesce(varSelectedTask.Title, "Task"), "Details")
+                  - flyClose_2:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        AlignInContainer: =AlignInContainer.Stretch
+                        BorderColor: =ButtonStyles.Secondary.BorderColor
+                        Color: =ButtonStyles.Secondary.Color
+                        Fill: =ButtonStyles.Secondary.Fill
+                        Height: =Min(36, flyHeader_2.Height - 12)
+                        HoverFill: =ColorFade(ButtonStyles.Secondary.Fill, -10%)
+                        OnSelect: =Set(varFlyoutOpen, false)
+                        PressedFill: =ColorFade(ButtonStyles.Secondary.Fill, -25%)
+                        RadiusBottomLeft: =AppSpacing.Radius
+                        RadiusBottomRight: =AppSpacing.Radius
+                        RadiusTopLeft: =AppSpacing.Radius
+                        RadiusTopRight: =AppSpacing.Radius
+                        Size: =10
+                        Text: ="Close" & Icon.Cancel
+                        Width: =96
+            - flyActions_2:
+                Control: GroupContainer@1.3.0
+                Variant: AutoLayout
+                Properties:
+                  FillPortions: =0
+                  Height: =If(App.Width <= BreakpointMedium, 48, 56)
+                  LayoutAlignItems: =Align.Center
+                  LayoutDirection: =LayoutDirection.Horizontal
+                  LayoutGap: =AppSpacing.S
+                  LayoutJustifyContent: =LayoutJustifyContent.SpaceBetween
+                Children:
+                  - flyPrimary_2:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =ButtonStyles.Primary.BorderColor
+                        Color: =ButtonStyles.Primary.Color
+                        Fill: =ButtonStyles.Primary.Fill
+                        Height: =flyActions_2.Height - 10
+                        HoverFill: =ColorFade(ButtonStyles.Primary.Fill, -10%)
+                        OnSelect: |-
+                          =Switch(
+                              varFlyoutView,
+                              "Doc", Notify("Document action..."),
+                              "Email", Notify("Rendering HTML below", NotificationType.Information),
+                              "Task", Notify("Task open coming soon", NotificationType.Information)
+                          )
+                        PressedFill: =ColorFade(ButtonStyles.Primary.Fill, -25%)
+                        RadiusBottomLeft: =AppSpacing.Radius
+                        RadiusBottomRight: =AppSpacing.Radius
+                        RadiusTopLeft: =AppSpacing.Radius
+                        RadiusTopRight: =AppSpacing.Radius
+                        Size: =10
+                        Text: =Switch(varFlyoutView, "Doc", "Open in Full View", "Email", "View HTML", "Task", "Open Task", "Open") & Switch(varFlyoutView, "Email", Icon.Text, "Doc", Icon.OpenInNewWindow, "Task", Icon.Edit, Icon.OpenInNewWindow)
+                  - flyReload_2:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =ButtonStyles.Warning.BorderColor
+                        Color: =ButtonStyles.Warning.Color
+                        Fill: =ButtonStyles.Warning.Fill
+                        Height: =flyActions_2.Height - 10
+                        HoverFill: =ColorFade(ButtonStyles.Warning.Fill, -10%)
+                        OnSelect: |-
+                          =
+                          UpdateContext({selectedAction: "ReloadAll"});
+                          Select(gal_Actions_6) // Point to the single source of truth
+                        PressedFill: =ColorFade(ButtonStyles.Warning.Fill, -25%)
+                        RadiusBottomLeft: =AppSpacing.Radius
+                        RadiusBottomRight: =AppSpacing.Radius
+                        RadiusTopLeft: =AppSpacing.Radius
+                        RadiusTopRight: =AppSpacing.Radius
+                        Size: =10
+                        Text: ="Reload" & Icon.Reload
+                        Width: =120
+            - flyBody_2:
+                Control: GroupContainer@1.3.0
+                Variant: AutoLayout
+                Properties:
+                  Height: =flyPanel_2.Height - flyHeader_2.Height - flyActions_2.Height - 64
+                  LayoutAlignItems: =LayoutAlignItems.Stretch
+                  LayoutDirection: =LayoutDirection.Vertical
+                  LayoutGap: =AppSpacing.S
+                Children:
+                  - flyDoc_2:
+                      Control: GroupContainer@1.3.0
+                      Variant: AutoLayout
+                      Properties:
+                        LayoutDirection: =LayoutDirection.Vertical
+                        LayoutGap: =AppSpacing.S
+                        Visible: =varFlyoutView="Doc"
+                      Children:
+                        - flyDocMeta_2:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =AppTheme.NeutralSecondary
+                              Font: =LookUp(TextStyles, Name="Caption").Font
+                              Size: =LookUp(TextStyles, Name="Caption").Size
+                              Text: =If(IsBlank(varSelectedDoc), "", varSelectedDoc.Category & " • " & Coalesce(varSelectedDoc.Status,"—") & " • " & Text(varSelectedDoc.Created, "[$-en-US]dd mmm yyyy"))
+                        - flyDocHtml_2:
+                            Control: HtmlViewer@2.1.0
+                            Properties:
+                              AlignInContainer: =AlignInContainer.Stretch
+                              BorderColor: =AppTheme_Default.NeutralLight
+                              BorderThickness: =1
+                              Fill: =AppTheme_Default.SecondaryBackground
+                              FillPortions: =1
+                              Height: =Max(220, flyBody_2.Height - 120)
+                              HtmlText: =Coalesce(varSelectedDoc.Description, "<i>No description</i>")
+                              PaddingBottom: =AppSpacing.M
+                              PaddingLeft: =AppSpacing.M
+                              PaddingRight: =AppSpacing.M
+                              PaddingTop: =AppSpacing.M
+                              Width: =Parent.Width - 2*AppSpacing.M
+                  - flyMail_2:
+                      Control: GroupContainer@1.3.0
+                      Variant: AutoLayout
+                      Properties:
+                        LayoutDirection: =LayoutDirection.Vertical
+                        LayoutGap: =AppSpacing.S
+                        Visible: =varFlyoutView="Email"
+                      Children:
+                        - flyMailMeta_2:
+                            Control: Label@2.5.1
+                            Properties:
+                              AutoHeight: =true
+                              Color: =AppTheme.NeutralSecondary
+                              Font: =LookUp(TextStyles, Name="Caption").Font
+                              Size: =LookUp(TextStyles, Name="Caption").Size
+                              Text: |-
+                                =If(IsBlank(varSelectedEmail), "", "From: " & varSelectedEmail.Importance & Char(10) & "To: " & varSelectedEmail.To)
+                        - flyMailHtml_2:
+                            Control: HtmlViewer@2.1.0
+                            Properties:
+                              BorderColor: =AppTheme_Default.NeutralLight
+                              BorderThickness: =1
+                              Fill: =AppTheme_Default.SecondaryBackground
+                              Height: =Max(240, flyBody_2.Height - 140)
+                              HtmlText: =Coalesce(varSelectedEmail.Body, "<i>No content</i>")
+                              PaddingBottom: =AppSpacing.M
+                              PaddingLeft: =AppSpacing.M
+                              PaddingRight: =AppSpacing.M
+                              PaddingTop: =AppSpacing.M
+                              Width: =Parent.Width - 2*AppSpacing.M
+                  - flyTask_2:
+                      Control: GroupContainer@1.3.0
+                      Variant: AutoLayout
+                      Properties:
+                        LayoutDirection: =LayoutDirection.Vertical
+                        LayoutGap: =AppSpacing.S
+                        Visible: =varFlyoutView="Task"
+                      Children:
+                        - flyTaskMeta_2:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =AppTheme.NeutralSecondary
+                              Font: =LookUp(TextStyles, Name="Caption").Font
+                              Size: =LookUp(TextStyles, Name="Caption").Size
+                              Text: |-
+                                =If(IsBlank(varSelectedTask), "", "Priority: " & Coalesce(varSelectedTask.Priority,"—") & " • " & "Status: " & Coalesce(varSelectedTask.Status,"—"))
+                        - flyTaskBody_2:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =AppTheme_Default.NeutralPrimary
+                              Font: =LookUp(TextStyles, Name="Body").Font
+                              Size: =LookUp(TextStyles, Name="Body").Size
+                              Text: ="Task details and subtasks will appear here."
+            - flyFooter_2:
+                Control: GroupContainer@1.3.0
+                Variant: AutoLayout
+                Properties:
+                  Fill: =AppTheme_Default.SecondaryBackground
+                  FillPortions: =0
+                  Height: =If(App.Width <= BreakpointMedium, 56, 64)
+                  LayoutAlignItems: =Align.Center
+                  LayoutDirection: =LayoutDirection.Horizontal
+                  LayoutGap: =AppSpacing.S
+                  LayoutJustifyContent: =LayoutJustifyContent.SpaceBetween
+                  PaddingLeft: =AppSpacing.M
+                  PaddingRight: =AppSpacing.M
+                Children:
+                  - flySecondary_2:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =ButtonStyles.Secondary.BorderColor
+                        Color: =ButtonStyles.Secondary.Color
+                        Fill: =ButtonStyles.Secondary.Fill
+                        Height: =flyFooter_2.Height - 10
+                        HoverFill: =ColorFade(ButtonStyles.Secondary.Fill, -10%)
+                        OnSelect: =Set(varFlyoutOpen, false)
+                        PressedFill: =ColorFade(ButtonStyles.Secondary.Fill, -25%)
+                        RadiusBottomLeft: =AppSpacing.Radius
+                        RadiusBottomRight: =AppSpacing.Radius
+                        RadiusTopLeft: =AppSpacing.Radius
+                        RadiusTopRight: =AppSpacing.Radius
+                        Size: =10
+                        Text: ="Close" & Icon.Cancel
+                        Width: =120
+                  - flyPrimaryFooter_2:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =ButtonStyles.AccentTeal.BorderColor
+                        Color: =ButtonStyles.AccentTeal.Color
+                        Fill: =ButtonStyles.AccentTeal.Fill
+                        Height: =flyFooter_2.Height - 10
+                        HoverFill: =ColorFade(ButtonStyles.AccentTeal.Fill, -10%)
+                        OnSelect: =Notify("Copy not supported natively; select text to copy.", NotificationType.Information)
+                        PressedFill: =ColorFade(ButtonStyles.AccentTeal.Fill, -25%)
+                        RadiusBottomLeft: =AppSpacing.Radius
+                        RadiusBottomRight: =AppSpacing.Radius
+                        RadiusTopLeft: =AppSpacing.Radius
+                        RadiusTopRight: =AppSpacing.Radius
+                        Size: =10
+                        Text: =Switch(varFlyoutView, "Doc", "Copy Title", "Email", "Copy Subject", "Task", "Copy Title", "Copy") & Icon.Copy
+                        Width: =140
+      - tmrFlyFocus_2:
+          Control: Timer@2.1.0
+          Properties:
+            AutoStart: =varFlyoutOpen
+            Duration: =10
+            OnTimerEnd: =SetFocus(flyClose_2)
+            Visible: =false
+            X: =40
+            Y: =40
+      - cmpScreenNavigation_17:
+          Control: CanvasComponent
+          ComponentName: cmpScreenNavigation
+          Properties:
+            Fill: =ColorFade(ColorValue("#05583B"),50%)
+            Height: =Parent.Height-100
+            Visible: =cmpScreenHeader_31.showNavigationOutput  || cmpScreenHeader_31.showNavigationOutput
+            Width: =If(Parent.Width>1000,300,Parent.Width)
+            X: =20
+            Y: =95
+            colScreensNavigation: |-
+              =Filter(Switch(
+                  Lower(User().Email),
+                  "dgsregistry@nitda.gov.ng",
+                  Table(
+                      {
+                          Name: "Home",
+                          Screen: 'Home Screen',
+                          Icon: Icon.Home,
+                          Color: ColorValue("#05583B")
+                      },
+                      SortByColumns(
+                          Table(
+                              {
+                                  Name: "E-mails",
+                                  Screen:EmailClient_Screen,
+                                  Icon: Icon.Message,
+                                  Color: ColorValue("#373435")
+                              },
+                              {
+                                  Name: "Activities",
+                                  Screen: Activities_1,
+                                  Icon: Icon.Database,
+                                  Color: ColorValue("#00A69D")
+                              },
+                              {
+                                  Name: "Task",
+                                  Screen: Task,
+                                  Icon: Icon.ListScrollWatchlist,
+                                  Color: ColorValue("#05583B")
+                              },
+                              {
+                                  Name: "Bulk Tagging",
+                                  Screen: Task,
+                                  Icon: Icon.Tag,
+                                  Color: ColorValue("#373435")
+                              },
+                              {
+                                  Name: "Support",
+                                  Screen: Support,
+                                  Icon: Icon.Help,
+                                  Color: ColorValue("#00A69D")
+                              },
+                              {
+                                  Name: "Maintenance",
+                                  Screen: Maintenance,
+                                  Icon: Icon.Tools,
+                                  Color: ColorValue("#373435")
+                              },
+                              {
+                                  Name: "Settings",
+                                  Screen: Settings,
+                                  Icon: Icon.Settings,
+                                  Color: ColorValue("#05583B")
+                              }
+                          ),
+                          "Name"
+                      )
+                  ),
+                  "dgs@nitda.gov.ng",
+                  Table(
+                      {
+                          Name: "Home",
+                          Screen: 'Home Screen',
+                          Icon: Icon.Home,
+                          Color: ColorValue("#05583B")
+                      },
+                      SortByColumns(
+                          Table(
+                              {
+                                  Name: "Activities",
+                                  Screen: Activities_1,
+                                  Icon: Icon.Database,
+                                  Color: ColorValue("#00A69D")
+                              },
+                              {
+                                  Name: "E-mails",
+                                  Screen:EmailClient_Screen,
+                                  Icon: Icon.Message,
+                                  Color: ColorValue("#373435")
+                              },
+                              {
+                                  Name: "Task",
+                                  Screen: Task,
+                                  Icon: Icon.ListScrollWatchlist,
+                                  Color: ColorValue("#05583B")
+                              },
+                              {
+                                  Name: "Support",
+                                  Screen: Support,
+                                  Icon: Icon.Help,
+                                  Color: ColorValue("#00A69D")
+                              },
+                              {
+                                  Name: "Maintenance",
+                                  Screen: Maintenance,
+                                  Icon: Icon.Tools,
+                                  Color: ColorValue("#373435")
+                              }
+                          ),
+                          "Name"
+                      )
+                  ),
+                  "dg@nitda.gov.ng",
+                  Table(
+                      {
+                          Name: "Home",
+                          Screen: 'Home Screen',
+                          Icon: Icon.Home,
+                          Color: ColorValue("#05583B")
+                      },
+                      SortByColumns(
+                          Table(
+                              {
+                                  Name: "Activities",
+                                  Screen: Activities_1,
+                                  Icon: Icon.Database,
+                                  Color: ColorValue("#00A69D")
+                              },
+                              {
+                                  Name: "E-mails",
+                                  Screen:EmailClient_Screen,
+                                  Icon: Icon.Message,
+                                  Color: ColorValue("#373435")
+                              },
+                              {
+                                  Name: "Task",
+                                  Screen: Task,
+                                  Icon: Icon.ListScrollWatchlist,
+                                  Color: ColorValue("#05583B")
+                              },
+                              {
+                                  Name: "Support",
+                                  Screen: Support,
+                                  Icon: Icon.Help,
+                                  Color: ColorValue("#00A69D")
+                              }
+                          ),
+                          "Name"
+                      )
+                  ),
+                  Table(
+                      {
+                          Name: "Home",
+                          Screen: 'Home Screen',
+                          Icon: Icon.Home,
+                          Color: ColorValue("#05583B")
+                      },
+                      SortByColumns(
+                          Table(
+                              {
+                                  Name: "E-mails",
+                                  Screen:EmailClient_Screen,
+                                  Icon: Icon.Message,
+                                  Color: ColorValue("#373435")
+                              },
+                              {
+                                  Name: "Task",
+                                  Screen: Task,
+                                  Icon: Icon.ListScrollWatchlist,
+                                  Color: ColorValue("#05583B")
+                              },
+                              {
+                                  Name: "Support",
+                                  Screen: Support,
+                                  Icon: Icon.Help,
+                                  Color: ColorValue("#00A69D")
+                              }
+                          ),
+                          "Name"
+                      )
+                  )
+              ),Name<>App.ActiveScreen.Name)
