@@ -55,3 +55,14 @@ The reviewed and enhanced R11.6.1 runtime (all 23 modules, design system, contra
 ## Addendum — R11.6.2
 
 A follow-up pass resolved four platform-wide UI defect classes: portrait view switching with explicit list/detail states and back controls; row selection now switching to the expected view; independent per-pane scroll regions (detail stays fixed while queues scroll); and de-merged detail columns rebuilt as stacks of independent panels with reveal-on-request forms. Locked in by the new `view-pane-contract` in the EAA-Cloud `dgo-platform/` runtime (117 checks passing).
+
+## Addendum — R11.6.3 Consolidation
+
+All findings of the duplication/redundancy/overlap assessment are fully implemented in the
+EAA-Cloud `dgo-platform/` runtime: canonical domain transitions (acknowledgment, task
+update/creation, correspondence disposition), one priority scale, shared report/export
+engine, single sync façade, notifications inbox, escalation queue, dispatch analytics and
+backend retry, real governance execution via the ownership façade, OTP-protected bulk
+batches, all orphan services wired or retired, shared classifiers/lineage/UI helpers, and
+HUD/Diagnostics delineation. Enforced by the new provisioning-drift and consolidation
+contracts — 119 checks pass.
