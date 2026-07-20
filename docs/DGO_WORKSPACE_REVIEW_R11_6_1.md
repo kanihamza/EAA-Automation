@@ -51,3 +51,7 @@ and user journeys. Every defect below was resolved in this pass; the full contra
 ## Runtime location
 
 The reviewed and enhanced R11.6.1 runtime (all 23 modules, design system, contract suite) lives in the EAA-Cloud repository under `dgo-platform/` on branch `claude/modules-workspace-review-wp8srf`. The legacy HTML screens in this repository are the parity sources that runtime consolidates.
+
+## Addendum — R11.6.2
+
+A follow-up pass resolved four platform-wide UI defect classes: portrait view switching with explicit list/detail states and back controls; row selection now switching to the expected view; independent per-pane scroll regions (detail stays fixed while queues scroll); and de-merged detail columns rebuilt as stacks of independent panels with reveal-on-request forms. Locked in by the new `view-pane-contract` in the EAA-Cloud `dgo-platform/` runtime (117 checks passing).
