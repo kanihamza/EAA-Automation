@@ -6,6 +6,7 @@ There is exactly **one** current version at any time. This file is the single so
 |---|---|
 | **Current version name** | `DGO_R11_6_CONSOLIDATED` |
 | **Build artifact (path)** | `dgo-r11-6-consolidation/DGO_R11_6_CONSOLIDATED.zip` |
+| **Embedded state.json** | `dgo-r11-6-consolidation/DGO_R11_6_CONSOLIDATED.state.json` (238 files, full content, no truncation; regenerates the package self-contained — round-trip verified) |
 | **Root folder inside zip** | `DGO_R11_6_CONSOLIDATED/` |
 | **Branch** | `claude/dgo-r11-6-audit-xm3jv6` |
 | **Git tag** | `dgo-r11.6-current` (annotated; local-only in the current environment — see note) |
