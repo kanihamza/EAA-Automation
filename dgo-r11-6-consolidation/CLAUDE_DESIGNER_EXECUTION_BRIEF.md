@@ -54,8 +54,14 @@ implementer makes **no design decisions of their own**.
 
 ## 3. GROUND TRUTH & INPUTS
 
-- **Primary artifact:** the platform source tree (245 files), root
-  `DGO_R11_6_OBSIDIAN_FIGMA_UIUX_IMPLEMENTED`. Treat the files as the only source of truth.
+- **Primary artifact (THE ONLY INPUT):** the **current version** `DGO_R11_6_CONSOLIDATED`
+  (238 files), pinned to branch `claude/dgo-r11-6-audit-xm3jv6` commit `aa62fef` / tag
+  `dgo-r11.6-current`. Source it from `dgo-r11-6-consolidation/DGO_R11_6_CONSOLIDATED.state.json`
+  (full-content-embedded, self-contained) and materialize the runnable tree with:
+  `python3 tools/state-json/regenerate_state.py dgo-r11-6-consolidation/DGO_R11_6_CONSOLIDATED.state.json DGO_R11_6_CONSOLIDATED`.
+  Treat that tree as the only source of truth. Do **not** use the superseded
+  `DGO_R11_6_OBSIDIAN_FIGMA_UIUX_REMEDIATED` build or the raw `PILOT_CANDIDATE` /
+  `ALL_RECOMMENDATIONS` snapshots.
 - **Self-evidence to read first (do not trust blindly — verify):**
   `evidence/DESIGN_SYSTEM_*`, `evidence/DESIGN_TOKEN_MAP.json`,
   `evidence/DESIGN_SYSTEM_RESPONSIVE_BEHAVIOUR_MATRIX.json`,
