@@ -4,10 +4,11 @@ There is exactly **one** current version at any time. This file is the single so
 
 | Field | Value |
 |---|---|
-| **Current version name** | `DGO_R11_6_CONSOLIDATED` |
-| **Build artifact (path)** | `dgo-r11-6-consolidation/DGO_R11_6_CONSOLIDATED.zip` |
-| **Embedded state.json** | `dgo-r11-6-consolidation/DGO_R11_6_CONSOLIDATED.state.json` (238 files, full content, no truncation; regenerates the package self-contained — round-trip verified) |
-| **Root folder inside zip** | `DGO_R11_6_CONSOLIDATED/` |
+| **Current version name** | `DGO_R11_6_CONSOLIDATED_R2` |
+| **Build artifact (path)** | `dgo-r11-6-consolidation-r2/DGO_R11_6_CONSOLIDATED_R2.zip` |
+| **Embedded state.json** | `dgo-r11-6-consolidation-r2/DGO_R11_6_CONSOLIDATED_R2.state.json` (237 files, full content, no truncation; regenerates the package self-contained — round-trip byte-identical) |
+| **Root folder inside zip** | `DGO_R11_6_CONSOLIDATED_R2/` |
+| **Basis** | Designer-spec execution: token reconciliation (Approach A), deterministic `@layer`, flat surfaces, deterministic KPI grid, 44px targets, mono. See package `EXECUTION_REPORT.md`. |
 | **Branch** | `claude/dgo-r11-6-audit-xm3jv6` |
 | **Git tag** | `dgo-r11.6-current` (annotated; local-only in the current environment — see note) |
 | **Built from (input snapshot)** | `DGO_R11_6_..._ALL_RECOMMENDATIONS` (245 files, generated 2026-07-23) |
@@ -24,6 +25,7 @@ There is exactly **one** current version at any time. This file is the single so
 
 | Artifact | Status |
 |---|---|
+| `dgo-r11-6-consolidation/DGO_R11_6_CONSOLIDATED.zip` | SUPERSEDED (previous current) |
 | `dgo-r11-6-remediation/DGO_R11_6_OBSIDIAN_FIGMA_UIUX_REMEDIATED.zip` | SUPERSEDED |
 | `DGO_R11_6_..._PILOT_CANDIDATE` snapshot (226 files) | SUPERSEDED INPUT |
 
