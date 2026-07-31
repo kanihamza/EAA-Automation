@@ -1,0 +1,82 @@
+--- a/index.html
++++ b/index.html
+@@ -6,25 +6,8 @@
+   <meta name="theme-color" content="#05583B">
+   <title>DGO Digital Operations — R11.6 Obsidian Harmonized Design System Runtime</title>
+   <link rel="icon" href="assets/dgo-mark.svg">
+-  <link rel="stylesheet" href="styles/dgo-design-system/colors_and_type.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/tokens/tokens.primitive.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/tokens/tokens.semantic.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/tokens/tokens.theme-light.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/tokens/tokens.theme-dark.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/tokens/tokens.theme-hc.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/tokens/tokens.component.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/tokens/tokens.density.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/tokens/tokens.enhanced.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/tokens/tokens.legacy-bridge.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/reset.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/base.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/layout.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/components.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/command-palette.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/platform-authority.css">
+-  <link rel="stylesheet" href="styles/tokens.css">
+-  <link rel="stylesheet" href="styles/app.css">
+-  <link rel="stylesheet" href="styles/dgo-design-system/figma-uiux-implemented.css">
++  <!-- Single deterministic @layer entry (see styles/index.css). Replaces 19 unordered links. -->
++  <link rel="stylesheet" href="styles/index.css">
+ </head>
+ <body>
+   <a class="skip" href="#main">Skip to main content</a>
+--- a/styles/app.css
++++ b/styles/app.css
+@@ -362,9 +362,16 @@
+ .dashboard-grid{
+   min-inline-size:0;
+   min-block-size:0;
+-  align-items:stretch !important;
+   overflow:hidden !important;
+ }
++/* Equal-height panes only where the layout is a true 2-pane master-detail
++   (has a data-md list/detail toggle) or an explicit dashboard/detail grid.
++   Generic .split (e.g. collapsible guidance panels) keeps align-items:start
++   so a collapsed <details> never inflates to its sibling's height. */
++.split[data-md],
++.dgo-master-detail,
++.dg-layout,
++.dashboard-grid{ align-items:stretch; }
+ .split>* ,
+ .dgo-master-detail__list,
+ .dgo-master-detail__detail,
+@@ -720,3 +727,31 @@
+   dgo-shell[data-route="response-tracking"] .source-view-chips{padding-block:6px;}
+   dgo-shell[data-route="correspondence"] .record-action-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+ }
++
++
++/* ============================================================
++   R11.6 CONSOLIDATION — data-independent layout corrections
++   (verified via headless render; no !important, single-owner)
++   ============================================================ */
++/* Kill the collapsed-panel stretch void: a collapsed <details> must not
++   inflate to its open sibling's height. */
++.cc-support-panels{align-items:start}
++.cc-progressive:not([open]){min-height:0}
++/* Fluid action grid: however many cards are visible (RBAC may hide some),
++   they fill the row instead of leaving a large empty panel. */
++.cc-action-grid{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
++/* KPI / metric labels must break only at spaces, never mid-word
++   (fixes "REFER ENCES" / "DISPAT CHED" on narrow cards). */
++.kpi small,.cc-kpi-band .kpi small,.dgo-kpi-card__top>span:first-child,.dgo-stat__label{overflow-wrap:normal;word-break:keep-all;hyphens:none}
++/* Mobile KPI band: two equal columns that fill the row so uppercase
++   labels have room and never clip. */
++@media(max-width:560px){
++  .cc-kpi-band .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
++  .cc-kpi-band .kpi{min-width:0}
++}
++/* .cc-kpi-band is a wrapper, not a metrics grid. A grouped rule
++   (.kpis,.stat-row,.cc-kpi-band{display:grid;...}) wrongly made it a
++   multi-column grid, so on narrow widths .kpis was trapped in the first
++   track and the band's right half went empty. The band is block; only its
++   inner .kpis is the grid. */
++.cc-kpi-band{display:block}
